@@ -2,9 +2,16 @@
 
 Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있는 Agent 중에서 역할마다 하나를 고르고, dwarf는 그 선택을 기록만 한다. 사용자가 파일을 만들거나 고치지 않는다.
 
+## 어디서 읽나
+
+1. 작업 루트의 `.dwarf/agents.md`. 현재 디렉토리에서 위로 올라가며 처음 만나는 것. 프로젝트나 워크스페이스 전용 Agent(예: 특정 워크스페이스 조사자)를 그 안에서만 쓰고 싶을 때 둔다. git 레포가 아닌 루트에도 둘 수 있다.
+2. 없으면 `~/.config/dwarf/agents.md`.
+
+둘 다 같은 형식. 작업 루트 파일은 사용자가 직접 두거나 `/dwarf agents --here`로 dwarf가 쓴다. 작업 루트 파일에 없는 역할은 사용자 홈 파일의 값을 쓴다.
+
 ## 언제
 
-- `~/.config/dwarf/agents.md`에 현재 harness 블록이 없을 때, 첫 `/dwarf` 실행에서.
+- 읽을 파일 어디에도 현재 harness 블록이 없을 때, 첫 `/dwarf` 실행에서.
 - `/dwarf agents`로 다시 고를 때.
 - 기록된 Agent가 이 세션에 없을 때는 묻지 않는다. 기본값으로 대체하고 답변에 한 줄 적는다.
 
@@ -23,7 +30,7 @@ Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있�
    | reviewer | 독립 리뷰를 맡길 Agent는? | `general-purpose` |
    | worker | 구현을 위임할 Agent는? | 없음 |
 
-3. 기록. `~/.config/dwarf/agents.md`에 현재 harness 블록을 쓴다. 디렉토리가 없으면 만든다. 다른 harness 블록은 건드리지 않는다.
+3. 기록. `~/.config/dwarf/agents.md`에 현재 harness 블록을 쓴다. `--here`면 작업 루트 `.dwarf/agents.md`에 쓴다. 디렉토리가 없으면 만든다. 다른 harness 블록은 건드리지 않는다.
 4. 선택 결과를 답변에 한 줄로 적고 원래 작업을 계속한다.
 
 ## 기록 형식

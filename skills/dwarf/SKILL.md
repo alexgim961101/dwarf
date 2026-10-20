@@ -11,7 +11,7 @@ disable-model-invocation: true
 ## 시작
 
 1. 인자 해석.
-   - `agents` → `references/agents.md`의 선택 절차를 실행하고 끝낸다.
+   - `agents` 또는 `agents --here` → `references/agents.md`의 선택 절차를 실행하고 끝낸다. `--here`는 작업 루트 `.dwarf/agents.md`에 기록.
    - `새 작업` 또는 `new task`로 시작 → 진행 중 playbook을 버리고 재매칭한다.
    - 그 외 → 목표. 대화에 진행 중 playbook이 있고 요청이 그 연장이면 계속하고, 아니면 재매칭한다.
 2. Claude Code가 아니면 `references/harness.md`에서 현재 도구의 행을 읽는다. 이 문서들은 Claude Code 용어가 기본이다.

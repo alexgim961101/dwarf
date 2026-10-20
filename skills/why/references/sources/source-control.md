@@ -27,7 +27,7 @@ git log <old>..<new> -p -- <file>                  # 두 시점 사이 변경
 git log -1 --format=%B <hash>                      # 본문에서 PR 번호·이슈 키 추출
 ```
 
-PR을 읽는다. 머지 커밋 제목의 `(#1234)`가 PR 번호.
+PR을 읽는다. 머지 커밋 제목의 `(#1234)`가 PR 번호. 원격이 GitHub가 아니면(`git remote get-url origin`으로 확인) `gh`를 쓰지 않고 머지 커밋 메시지와 이슈 키로 대신한다. Bitbucket·GitLab MCP 도구가 세션에 보이면 그것으로 PR 본문을 읽는다.
 
 ```bash
 gh pr view <n> --json title,body,author,createdAt,mergedAt,labels,closingIssuesReferences,comments,reviews

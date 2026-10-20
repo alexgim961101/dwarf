@@ -74,6 +74,7 @@ dwarf/
 
 - playbook은 역할 이름만 쓴다. Agent 이름은 쓰지 않는다.
 - 최초 실행에서 매핑이 없으면 dwarf가 harness의 Agent 후보를 열거해 역할마다 묻고, 선택을 `~/.config/dwarf/agents.md`에 스스로 기록한다. 사용자는 고르기만 한다. `/dwarf agents`로 다시 고른다.
+- 매핑은 작업 루트 `.dwarf/agents.md`가 있으면 그것을, 없으면 `~/.config/dwarf/agents.md`를 읽는다. 워크스페이스 전용 조사 Agent(예: retailtrend-agent)를 그 워크스페이스에서만 explorer로 쓰는 첫 필요가 생겨 추가.
 - 기록된 Agent가 이 세션에 없으면 기본값으로 대체하고 답변에 한 줄 적는다.
 - 위임 도구가 없는 harness는 모든 역할 "없음". playbook의 모든 단계는 역할이 없어도 owner가 직접 수행할 수 있게 쓴다.
 - brief는 자기완결. Agent가 dwarf 파일을 읽지 않아도 일이 되어야 한다. 형식은 `references/roles.md`.
@@ -130,7 +131,6 @@ playbook을 따로 두는 기준은 산출물이 다르거나 소유 선언이 �
 
 - 모델·effort 설정 파일. Agent 정의 파일. 페르소나 Agent.
 - 세션 지속성 hook. compaction 후 드리프트가 실제로 보이면 검토.
-- 프로젝트별 Agent 매핑. 필요가 두 번 생기면 추가.
 - PR 운영·배포·오케스트레이션 playbook. 배포·롤백·데이터 재계산·force push는 `~/skills`의 운영 스킬 영역.
 - 학습 자료·문서 생성 자체가 목적인 작업.
 - 2차 playbook 후보: onboard(저장소 전체 파악 문서). 2차 leaf 후보는 "leaf 스킬" 절에.
