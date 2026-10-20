@@ -1,6 +1,6 @@
 ---
 name: dwarf
-description: 공통 개발 작업의 단일 진입점. 목표를 받아 playbook을 고르고 단계를 수행한다. /dwarf <목표>, /dwarf 새 작업 <목표>, /dwarf agents.
+description: 공통 개발 작업의 단일 진입점. 목표를 받아 playbook을 고르고 단계를 수행한다. 호출은 /dwarf 목표, /dwarf 새 작업 목표, /dwarf agents.
 disable-model-invocation: true
 ---
 
