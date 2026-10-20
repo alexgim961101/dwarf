@@ -31,8 +31,20 @@ playbook 10개. brainstorm, investigation, review, diagnosis, design, bug-fix, f
 
 ## 설치
 
-미작성. `skills/` 하위 디렉토리를 각 도구의 `skills/`에 심볼릭 링크하는 스크립트를 둘 예정. 그때까지는 수동으로.
+`skills/` 하위 디렉토리를 각 도구의 `skills/`에 심볼릭 링크한다. 설정 디렉토리가 있는 도구에만 설치하고, 같은 이름이 이미 있으면 덮어쓰지 않는다. 저장소를 옮기면 링크가 깨진다.
 
 ```bash
-for d in skills/*/; do ln -s "$(pwd)/$d" ~/.claude/skills/; done
+./install.sh --tool claude        # Claude Code에만
+./install.sh                      # 감지된 모든 도구 (claude, codex, pi, omp)
+./install.sh --tool claude how why  # 일부 스킬만
+./install.sh --uninstall          # 이 저장소가 만든 링크 제거
 ```
+
+| 도구 | 설치 위치 |
+|---|---|
+| Claude Code | `~/.claude/skills/<스킬명>` |
+| Codex | `~/.codex/skills/<스킬명>` |
+| Pi | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/skills/<스킬명>` |
+| OMP | `~/.omp/agent/skills/<스킬명>` |
+
+설치 뒤 새 세션에서 `/dwarf`가 보인다. Codex·Pi·OMP는 설치만 되고 동작은 아직 확인하지 않았다.

@@ -40,7 +40,7 @@
 dwarf/
   README.md
   docs/design.md             # 이 문서
-  install.sh                 # 미작성. skills/ 하위 디렉토리를 각 도구의 skills/ 에 심볼릭 링크
+  install.sh                 # skills/ 하위 디렉토리를 각 도구의 skills/ 에 심볼릭 링크. --tool, --uninstall, 스킬명 선택
   skills/
     dwarf/
       SKILL.md               # 라우터. 80줄 상한
