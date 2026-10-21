@@ -20,7 +20,7 @@
    │
    ▼
 [1] 라우터      skills/dwarf/SKILL.md
-   │  분류 · "새 작업" 재매칭 · Agent 매핑 적용 · 위임 여부 질문 · playbook 단계를 todo에 복사
+   │  분류 · "새 작업" 재매칭 · Agent 매핑 적용 · 위임 여부 질문 · playbook 단계를 todo에 복사 · 보고 뒤 정리
    ▼
 [2] playbook    skills/dwarf/playbooks/<type>.md
    │  단계 순서 · skip 허용 조건 · 완료 조건 · 보고 항목
@@ -123,6 +123,7 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
 - "새 작업" 또는 "new task"로 시작하는 요청은 진행 중 playbook을 버리고 재매칭한다.
 - 사용자가 playbook이나 단계를 이름으로 지정하면 분류보다 우선한다.
 - 모든 playbook은 완료 전 검증으로 끝난다. 검증 명령을 실제로 실행하고 출력을 본 뒤에만 완료라고 말한다.
+- 보고 뒤 이번 실행이 만든 자원(컨테이너, 서버·백그라운드 프로세스, worktree, bisect 상태, 임시 도구·파일)을 정리한다. 보고서·아티팩트와 실행 전부터 있던 것은 남기고, 멈춤으로 끝나도 정리한다. leaf의 정리(root-cause 계측 제거, bench 정리)는 그대로 두고 라우터가 마지막에 한 번 더 확인한다. 사용자 요청으로 추가.
 
 ## 원칙
 
