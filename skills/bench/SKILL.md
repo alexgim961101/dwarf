@@ -13,14 +13,14 @@ disable-model-invocation: true
 | 항목 | 기본 | 비고 |
 |---|---|---|
 | 모드 | 서비스 모드: 부하 → p50·p95 지연, 처리량, 오류율. 작업 모드: 입력 데이터셋 → 완료 시간, 최대 메모리, 처리 건수 | HTTP API는 서비스, 배치·분석 작업은 작업 모드 |
-| 대상 | 프로젝트의 compose 서비스. 기준선과 사후는 코드만 다르고 이미지 베이스·설정·데이터셋·환경변수는 같음 | 한쪽만 기본 설정이면 구현이 아니라 설정을 비교한 것 |
+| 대상 | 프로젝트의 compose 서비스. 비교하는 코드(기본은 기준선과 사후, 원인 제거 실험이면 정상 버전·현재·원인 제거)끼리는 코드만 다르고 이미지 베이스·설정·데이터셋·환경변수는 같음 | 한쪽만 기본 설정이면 구현이 아니라 설정을 비교한 것 |
 | 부하 생성기 | 서비스 모드 `grafana/k6` 스크립트 하나, `--summary-export`로 JSON. 작업 모드는 실행 명령과 `/usr/bin/time -v` | k6가 먼저 포화되면 측정한 것은 k6. 부하기 CPU도 기록 |
 | 자원 계측 | `docker stats --no-stream --format` 1초 샘플링 → CSV | Prometheus·cAdvisor·Grafana는 시계열 그래프가 필요해질 때 추가 |
 | 프로파일 | 언어별. Go `pprof`, Node `--cpu-prof`, Python `py-spy` | 보고하지 않는 run에서만. 프로파일러가 느리게 만듦 |
-| 반복 | 기준선·사후 번갈아 5회(A B A B …). 중앙값과 범위 | 변동 폭보다 작은 차이는 차이 없음 |
+| 반복 | 비교하는 코드를 번갈아 5회(A B A B …, 셋이면 A B C A B C …). 중앙값과 범위 | 변동 폭보다 작은 차이는 차이 없음 |
 | 환경 기록 | `nproc`, `uptime`의 부하, 이미지 digest, 데이터셋 크기, 날짜 | 머신이 바쁘면 번갈아 돌려 양쪽이 같은 노이즈를 보게 함 |
 | 위치 | `<작업 디렉토리>/.docs/perf/`. 작업 디렉토리는 세션을 시작한 디렉토리 | 저장소 루트·상위 디렉토리·스킬 디렉토리에 만들지 않는다. 아래 명령의 `.docs/perf/`는 이 기준이고, 명령은 작업 디렉토리에서 실행한다 |
-| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/{baseline,after}/` | summary JSON, stats CSV, 프로파일, 환경 기록, 재실행 명령 |
+| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/<코드 이름>/`. 기본 `baseline`, `after`. 원인 제거 실험은 `good`, `current`, `removed` | summary JSON, stats CSV, 프로파일, 환경 기록, 재실행 명령 |
 | 한계 | 로컬 docker 숫자는 상대 비교. 절대값은 운영 환경이 아님 | 보고에 명시 |
 
 ## 절차
@@ -31,7 +31,7 @@ disable-model-invocation: true
    ```bash
    { date -Iseconds; nproc; uptime; docker compose -f .docs/perf/compose.yml images --format json; } > .docs/perf/<run>/env.txt
    ```
-4. 한 라운드를 돈다. 기준선 코드로 띄우고 측정하고 내리고, 사후 코드로 같은 순서. 이것을 5회 번갈아 반복한다. 한 라운드의 서비스 모드 명령.
+4. 한 라운드를 돈다. 비교하는 코드마다 띄우고 측정하고 내린다. 이것을 5회 번갈아 반복한다. 한 라운드의 서비스 모드 명령.
    ```bash
    docker compose -f .docs/perf/compose.yml up -d app
    docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}}' app >> .docs/perf/<run>/stats.csv &  # 1초 루프로 감싼다
@@ -44,4 +44,4 @@ disable-model-invocation: true
 
 ## 보고
 
-지표와 데이터셋, 기준선 → 사후(중앙값, 범위, 횟수), 오류 수와 처리 건수, limiter, 아티팩트 절대 경로, 재실행 명령 한 줄. 결론은 `p-explain-the-number`의 넷 중 하나.
+지표와 데이터셋, 비교한 코드별 중앙값·범위·횟수, 오류 수와 처리 건수, limiter, 아티팩트 절대 경로, 재실행 명령 한 줄. 결론은 `p-explain-the-number`의 넷 중 하나.
