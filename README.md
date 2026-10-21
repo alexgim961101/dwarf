@@ -10,7 +10,7 @@
 | `/dwarf <목표>` | 분류 → playbook 단계를 todo에 복사 → 수행 → 보고 |
 | `/dwarf 새 작업 <목표>` | 진행 중 playbook을 버리고 재매칭 |
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent를 다시 고름 |
-| `/how`, `/why`, `/blast-radius`, `/bench` | leaf 스킬 단독 호출 |
+| `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |
 
 최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
 
@@ -23,6 +23,9 @@ skills/
   how/  why/          # 동작·구조 파악, 동기·이력 조사
   blast-radius/       # 변경이 diff 밖의 어디를 깨뜨리나
   bench/              # 성능 측정 환경과 교대 측정
+  root-cause/         # 재현과 가설 소거로 결함의 메커니즘 확정
+  blueprint/          # 데이터 형태·대안 비교·작업 단위
+  inspect/            # 변경을 의도와 대조해 발견 사항과 판정
 tests/routing.md      # 프롬프트 → 기대 playbook
 docs/design.md        # 설계 기준
 ```

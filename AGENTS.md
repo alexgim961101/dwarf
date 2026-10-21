@@ -20,17 +20,19 @@
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
 | `skills/blast-radius/` | leaf. 변경이 diff 밖의 어디를 깨뜨리나 |
 | `skills/bench/` | leaf. 성능 측정 환경. `templates/`에 compose·k6 |
+| `skills/root-cause/`, `skills/blueprint/`, `skills/inspect/` | leaf. 결함 원인 확정 / 설계·작업 단위 / 변경 점검·판정 |
 | `tests/routing.md` | 프롬프트 → 기대 playbook 케이스 |
 | `docs/design.md` | 설계 기준. 결정·미결·하지 않는 것 |
 | `install.sh` | `skills/*/`를 각 도구의 skills 디렉토리에 심볼릭 링크 |
 | `.docs/` | 로컬 작업 문서. gitignore |
 
 ```
-라우터 ──▶ playbook ──▶ leaf 스킬 (p-*, how, why, blast-radius, bench)
+라우터 ──▶ playbook ──▶ leaf 스킬 (p-*, how, why, blast-radius, bench, root-cause, blueprint, inspect)
    └──────────┴─────────────┴──▶ references/  (모든 층이 읽기만 함)
 ```
 
 - 참조는 위에서 아래로만. leaf는 playbook·라우터를 모른다.
+- playbook은 다른 playbook을 포함하지 않는다. 둘 이상에서 반복되는 절차는 leaf로 내리고 playbook은 leaf를 순서대로 부른다.
 - 다른 스킬은 `Skill` 도구가 아니라 경로(`<dwarf>/../<name>/SKILL.md`)로 읽는다. `skills/` 아래 형제 배치를 유지한다.
 
 ## 작성 규칙
@@ -46,6 +48,12 @@
 - 모든 단계는 역할 매핑이 "없음"이어도 owner가 직접 수행할 수 있게 쓴다.
 - `p-<name>`은 판단 단계 옆에만 붙이고 절차 단계에는 붙이지 않는다.
 - playbook·leaf·원칙은 같은 필요가 두 번 보일 때만 추가한다. 후보와 미룬 이유는 `docs/design.md`에 있다.
+- 책임 분담. playbook은 순서·멈춤·사용자 보고·재라우팅, leaf는 절차와 출력. leaf에 멈춤·보고 항목·다음 playbook을 쓰지 않는다.
+- leaf 분리는 셋 다 맞을 때만.
+  - 두 개 이상 playbook에서 같은 내용으로 반복된다. 유형별 변형이 대부분이면 playbook에 남긴다.
+  - 여러 줄의 절차다. 한 줄짜리는 playbook이나 원칙에 둔다.
+  - playbook 없이도 입력·출력이 성립한다.
+  - 예외. 템플릿·스크립트를 동반하는 절차는 한 playbook만 써도 leaf.
 - pstack은 구조만 참고한다. 문구·코드는 가져오지 않고 새로 쓴다.
 
 ## 변경 시 함께 갱신
@@ -58,6 +66,7 @@
 | 분류 트리 변경 | `tests/routing.md` 재실행 |
 | 역할·brief 변경 | `references/roles.md`, 그 역할을 쓰는 playbook·leaf |
 | 설계 결정 변경 | `docs/design.md` 해당 절과 미결 표 |
+| playbook·leaf 책임 분담, leaf 분리 기준 | `AGENTS.md` 작성 규칙, `docs/design.md` leaf 스킬 절 |
 
 ## 테스트 방법
 

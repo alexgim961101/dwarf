@@ -1,6 +1,6 @@
 ---
 name: bench
-description: 성능 측정 환경을 docker compose로 세우고, 변경 전·후를 같은 조건에서 번갈아 N회 측정해 아티팩트를 남긴다. 서비스 모드(부하 → 지연·처리량)와 작업 모드(입력 → 완료 시간·메모리). perf playbook이 기준선과 사후 측정에 사용.
+description: 성능 측정 환경을 docker compose로 세우고, 변경 전·후를 같은 조건에서 번갈아 N회 측정해 아티팩트를 남긴다. 서비스 모드(부하 → 지연·처리량)와 작업 모드(입력 → 완료 시간·메모리).
 disable-model-invocation: true
 ---
 
@@ -24,7 +24,7 @@ disable-model-invocation: true
 
 ## 절차
 
-1. 지표와 모드를 정한다. 지표 하나, 데이터셋 크기, 목표치. perf playbook 1단계에서 받는다.
+1. 지표와 모드를 정한다. 지표 하나, 데이터셋 크기, 목표치. 이미 정해져 넘어왔으면 그대로 쓴다.
 2. 측정 환경을 준비한다. 프로젝트에 `.docs/perf/compose.yml`이 없으면 `templates/docker-compose.perf.yml`을 복사해 앱 서비스를 채운다. 서비스 모드면 `templates/k6.js`를 복사해 경로와 임계값을 채운다. 작업 모드면 실행 명령과 입력 경로를 적는다. 데이터셋은 고정 파일로 두고 크기를 기록한다.
 3. 환경을 기록한다.
    ```bash

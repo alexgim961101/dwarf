@@ -56,6 +56,9 @@ dwarf/
     why/references/          # investigator-brief.md, sources/{source-control,jira}.md
     blast-radius/SKILL.md    # leaf. 변경이 diff 밖의 어디를 깨뜨리나. 안전의 근거 하나를 실행으로 증명
     bench/SKILL.md           # leaf. 성능 측정 환경. templates/{docker-compose.perf.yml,k6.js}
+    root-cause/SKILL.md      # leaf. 재현과 가설 소거로 처음 잘못된 지점·메커니즘 확정. 수정 없음
+    blueprint/SKILL.md       # leaf. 데이터 형태, 대안 비교, 검증으로 끝나는 작업 단위. 코드 없음
+    inspect/SKILL.md         # leaf. 변경을 의도와 대조. 발견 사항·판정, reviewer 위임
     <leaf>/SKILL.md          # 2개 이상 playbook에서 반복되는 절차만
   tests/
     routing.md               # 프롬프트 → 기대 playbook
@@ -83,13 +86,19 @@ dwarf/
 
 playbook을 따로 두는 기준은 산출물이 다르거나 소유 선언이 다를 때. 산출물이 같고 단계만 건너뛰면 같은 playbook의 변형(`skip`).
 
+playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈춤·보고·재라우팅을 소유하고, 둘 이상에서 반복되는 절차는 leaf로 내려 순서대로 부른다. 기준은 "leaf 스킬" 절.
+
+- 검토하고 채택하지 않은 것.
+  - playbook이 다른 playbook을 단계로 포함. 포함될 때 보고·멈춤을 끄는 두 번째 실행 방식이 생기고 playbook 간 의존이 생긴다.
+  - 라우터가 요청마다 playbook 여러 개를 골라 순서를 정함. 필수 선행 단계가 매 요청의 판단에 달리고 라우팅 테스트가 순서열 비교가 된다. 서로 다른 유형을 섞은 복합 요청(예: refactoring 뒤 perf)이 두 번 보이면 재검토.
+
 | playbook | 소유 선언 | 입력 | 산출물 |
 |---|---|---|---|
 | brainstorm | 질문을 소유. 코드 없음 | 막연한 목표·문제 | 문제 정의, 성공 기준, 대안 비교표, 추천, 다음 단계 |
 | investigation | 답을 소유 | 질문 | 근거 붙은 설명 또는 비교표가 있는 권고. 외부 기술 비교는 출처·버전 명시 |
 | review | 판정을 소유 | diff·브랜치·PR | 발견 사항(위치·근거·심각도)과 판정 |
-| diagnosis | 진단을 소유, 수정은 아님 | 증상·로그 | 원인 보고서. bug-fix 1·2단계에서 멈춤 |
-| design | 설계를 소유, 코드는 아님 | 정해진 요구 | 설계·계획 문서. feature 1~4단계에서 멈춤 |
+| diagnosis | 진단을 소유, 수정은 아님 | 증상·로그 | 원인 보고서. bug-fix 1단계에서 멈춤 |
+| design | 설계를 소유, 코드는 아님 | 정해진 요구 | 설계·계획 문서. feature 1~3단계에서 멈춤 |
 | bug-fix | 작업을 소유 | 재현 가능한 결함 | 재현 → 원인 → 최소 수정 → 같은 표면 검증. 변형: 간헐적, 회귀 |
 | feature | 설계를 소유 | 요구 | 데이터 형태 → 설계 → 작은 단위 구현·검증. 변형: 소(설계·계획 skip), 대(design 먼저) |
 | refactoring | 계약을 소유 | 구조 변경 요구 | 동작 불변 근거와 함께 구조 변경 |
@@ -98,7 +107,7 @@ playbook을 따로 두는 기준은 산출물이 다르거나 소유 선언이 �
 | (없음) | | 어디에도 맞지 않음 | todo에 `playbook 없음: 이유`. 원칙과 완료 전 검증만 적용 |
 
 - 흐름: brainstorm(무엇) → design(어떻게) → feature(구현). 각 단계에서 멈추고 사용자 결정으로 다음으로 넘어간다.
-- 재라우팅: 변경 없는 playbook 도중 변경이 필요하면 알리고 제안만. diagnosis → bug-fix 3단계, design → feature 5단계로 앞 결과를 재사용. chore에서 설계 판단이 생기면 feature, refactoring·perf에서 동작 변경이 필요하면 멈춤.
+- 재라우팅: 변경 없는 playbook 도중 변경이 필요하면 알리고 제안만. diagnosis → bug-fix 2단계, design → feature 4단계로 앞 결과를 재사용. chore에서 설계 판단이 생기면 feature, refactoring·perf에서 동작 변경이 필요하면 멈춤.
 - brainstorm은 질문이 주 도구인 유일한 playbook. `p-act-before-asking`의 예외로 명시.
 
 - 라우터는 Claude Code에서 `references/harness.md`를 읽지 않는다. 문서가 Claude Code 용어로 쓰여 있어 다른 도구일 때만 매핑이 필요하다. 실행당 읽기 한 번을 줄인다.
@@ -118,12 +127,18 @@ playbook을 따로 두는 기준은 산출물이 다르거나 소유 선언이 �
 
 ## leaf 스킬
 
-- 원칙: 두 개 이상 playbook에서 같은 절차가 반복될 때만 leaf로 분리한다.
+- 분리 기준. 셋 다 맞을 때만 leaf로 둔다.
+  - 두 개 이상 playbook에서 같은 내용으로 반복된다. 유형별 변형이 대부분이면 playbook에 남긴다. 잘게 쪼개면 파일만 늘고 흐름이 흩어진다.
+  - 여러 줄의 절차다. 한 줄짜리는 playbook이나 원칙에 둔다.
+  - playbook 없이도 입력·출력이 성립한다. leaf는 playbook을 모르므로 단독으로 의미가 있어야 한다.
+- 책임. leaf는 절차와 출력을 정한다. 멈춤·사용자 보고 항목·다음 playbook은 쓰지 않는다. 그건 playbook과 라우터의 몫.
 - 분리 완료: `how`(동작·구조 파악. 7개 playbook에서 반복), `why`(동기·이력 조사. 4개 playbook에서 반복). why는 출처별 playbook을 `references/sources/`에 둔다. v1은 소스 관리(항상)와 Jira(Atlassian MCP가 보일 때) 둘. 문서·채팅·관측은 brief의 일반 지시로 조사하고, 같은 출처가 두 번 필요해지면 추가. 구조는 pstack how·why(MIT)를 참고했고 문장은 새로 썼다. pstack과 다른 점은 종합을 별도 explainer·synthesizer가 아니라 owner가 하고, 모델을 지정하지 않는 것.
 - 분리 완료: `blast-radius`(변경이 diff 밖의 어디를 깨뜨리나. 확신 5단계 사다리와 안전 근거 하나의 실행 증명. investigation·review·feature·refactoring·chore 5곳). `bench`(성능 측정 환경과 N회 교대 측정. perf 전용이지만 compose·k6 템플릿을 동반하는 절차라 playbook 안에 둘 수 없어 leaf). 둘 다 구조는 pstack blast-radius·benchmark-checklist 참고, 문장은 새로 썼다.
 - 분리 기준의 예외: 템플릿·스크립트 같은 파일을 동반하는 절차는 한 playbook만 써도 leaf로 둔다.
-- 분리 후보: verify(완료 전 검증 체크리스트), ship(커밋 배열·PR).
-- pstack에서 검토하고 채택하지 않은 것. architect·arena·swarm·interrogate(다중 후보·다중 모델 병렬. agent 하나 입장과 어긋남), figure-it-out(design과 "playbook 없음"이 대신), show-me-your-work(자율 실행 없음), unslop·technical-writing(문체는 전역 지침), typescript-best-practices(언어별은 프로젝트 소유), in-your-own-words·sharpen(brainstorm·design·feature 1단계에 흡수), teach(investigation이 대신), no-comments(review 3단계 한 줄로 흡수), poteto-help·setup-pstack·automate-me·make-bot-ui·bro(Cursor·pstack 전용).
+- 분리 완료: `root-cause`(재현·가설 소거·메커니즘. diagnosis·bug-fix. perf의 원인 파악은 측정 기반이라 제외), `blueprint`(데이터 형태·대안 비교·작업 단위. design·feature. bug-fix·perf의 "함수 경계를 넘으면 대안 둘"은 한 줄이라 playbook에 둔다), `inspect`(점검 목록·발견 사항 형식·reviewer 위임. review·bug-fix·feature·refactoring·perf. playbook마다 다른 중심 질문은 입력으로 받는다). 각 leaf는 상태·미결·판정을 돌려주고, 그것을 보고 멈출지는 playbook이 정한다.
+- 이름은 답하는 질문 기준. playbook 이름(design·review)과 Claude Code 내장 `code-review`를 피했다. spec은 요구 명세로 읽혀 입력(완료 조건)과 헷갈리고, plan은 plan mode와 겹쳐 쓰지 않았다.
+- 분리하지 않는 것. 검증·구현·커밋 준비는 유형별 규칙이 대부분이다(재현 통과·사후 측정·전후 테스트 동일, 실패 테스트 먼저·가설 하나씩, 커밋 배열). 검증 공통부는 라우터 완료 전 검증과 `p-prove-it-works`가 맡는다. 요구 다시 쓰기는 한 줄. 기존 후보 verify·ship은 같은 이유로 내린다.
+- pstack에서 검토하고 채택하지 않은 것. architect·arena·swarm·interrogate(다중 후보·다중 모델 병렬. agent 하나 입장과 어긋남), figure-it-out(design과 "playbook 없음"이 대신), show-me-your-work(자율 실행 없음), unslop·technical-writing(문체는 전역 지침), typescript-best-practices(언어별은 프로젝트 소유), in-your-own-words·sharpen(brainstorm·design·feature 1단계에 흡수), teach(investigation이 대신), no-comments(inspect 점검 목록 한 줄로 흡수), poteto-help·setup-pstack·automate-me·make-bot-ui·bro(Cursor·pstack 전용).
 - 2차 후보: recall(세션 맥락 복원), ketchup(대화 따라잡기), correct(반복 실수를 구조로 막기. p-encode-lessons와 함께), reflect(dwarf 자체 개선), create-verification-skill(앱을 사용자처럼 구동하는 프로젝트 전용 검증 스킬 생성). 필요가 두 번 보이면 추가.
 - leaf는 `/how`, `/why`처럼 단독 호출도 된다. `disable-model-invocation: true`, 라우터와 playbook은 `<dwarf>/../<name>/SKILL.md` 경로로 읽는다.
 

@@ -44,7 +44,7 @@ disable-model-invocation: true
 ## 재라우팅
 
 - 변경 없는 playbook(brainstorm, investigation, review, diagnosis, design) 도중 코드 변경이 필요해지면 사용자에게 알리고 다음 playbook을 제안한다. 멋대로 넘어가지 않는다.
-- diagnosis 뒤 "고쳐"는 bug-fix 3단계부터, design 승인 뒤 "진행"은 feature 5단계부터. 앞 결과를 다시 하지 않는다.
+- diagnosis 뒤 "고쳐"는 bug-fix 2단계부터, design 승인 뒤 "진행"은 feature 4단계부터. 앞 결과를 다시 하지 않는다.
 - chore에서 설계 판단이 생기면 feature로, refactoring·perf에서 동작 변경이 필요하면 멈추고 알린다. 지금까지의 변경은 유지한다.
 
 ## 실행
