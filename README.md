@@ -7,7 +7,7 @@
 
 | 호출 | 하는 일 |
 |---|---|
-| `/dwarf <목표>` | 분류 → playbook 단계를 todo에 복사 → 수행 → 보고 |
+| `/dwarf <목표>` | 분류 → 서브에이전트 사용 여부 선택 → playbook 단계를 todo에 복사 → 수행 → 보고 |
 | `/dwarf 새 작업 <목표>` | 진행 중 playbook을 버리고 재매칭 |
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |

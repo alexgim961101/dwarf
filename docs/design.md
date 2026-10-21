@@ -20,7 +20,7 @@
    │
    ▼
 [1] 라우터      skills/dwarf/SKILL.md
-   │  분류 · "새 작업" 재매칭 · playbook 단계를 todo에 복사 · Agent 매핑 적용
+   │  분류 · "새 작업" 재매칭 · Agent 매핑 적용 · 위임 여부 질문 · playbook 단계를 todo에 복사
    ▼
 [2] playbook    skills/dwarf/playbooks/<type>.md
    │  단계 순서 · skip 허용 조건 · 완료 조건 · 보고 항목
@@ -79,6 +79,8 @@ dwarf/
 - 최초 실행에서 매핑이 없으면 dwarf가 harness의 Agent 후보를 열거해 역할마다 묻고, 선택을 `~/.config/dwarf/agents.md`에 스스로 기록한다. 사용자는 고르기만 한다. `/dwarf agents`로 다시 고른다.
 - 매핑은 작업 루트 `.dwarf/agents.md`가 있으면 그것을, 없으면 `~/.config/dwarf/agents.md`를 읽는다. 워크스페이스 전용 조사 Agent(예: retailtrend-agent)를 그 워크스페이스에서만 explorer로 쓰는 첫 필요가 생겨 추가.
 - 기록된 Agent가 이 세션에 없으면 기본값으로 대체하고 답변에 한 줄 적는다.
+- 실행마다 위임 여부를 묻는다. playbook을 매칭한 뒤 1단계 전에 "사용 (매핑대로)" / "사용 안 함 (owner가 직접)". 비용·속도·컨텍스트를 실행 단위로 사용자가 정하게 하려는 사용자 결정. 요청에 이미 정해져 있거나, 같은 playbook을 이어 가거나, 매핑을 막 골랐거나, 위임할 Agent가 없으면 묻지 않는다. "사용 안 함"은 그 실행 동안 모든 역할을 `none`으로 보고 매핑 파일은 바꾸지 않는다.
+  - 검토하고 채택하지 않은 것. 요청할 때만 끄기(`--solo`, "서브에이전트 없이"): 질문은 줄지만 사용자가 기억해야 한다. 설정으로 매번 묻기 켜기: 설정 항목이 늘고 필요가 아직 없다. 실행 전에는 실제 위임 여부를 모르고(how는 복잡도를 실행 중에 판정) `p-act-before-asking`과도 긴장이 있지만, 사용자가 통제를 택했다.
 - 위임 도구가 없는 harness는 모든 역할 "없음". playbook의 모든 단계는 역할이 없어도 owner가 직접 수행할 수 있게 쓴다.
 - brief는 자기완결. Agent가 dwarf 파일을 읽지 않아도 일이 되어야 한다. 형식은 `references/roles.md`.
 
