@@ -27,7 +27,7 @@
    ▼
 [3] leaf 스킬   skills/<name>/SKILL.md     ← 단독 호출도 가능. 반복되는 절차만 분리
    ▼
-[4] 산출물      <프로젝트>/.docs/ (미결)
+[4] 산출물      <작업 디렉토리>/.docs/ (미결)
 
 공유 참조       skills/dwarf/references/{roles,agents,harness,principles}.md
 ```
@@ -95,7 +95,7 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
 | playbook | 소유 선언 | 입력 | 산출물 |
 |---|---|---|---|
 | brainstorm | 질문을 소유. 코드 없음 | 막연한 목표·문제 | 문제 정의, 성공 기준, 대안 비교표, 추천, 다음 단계 |
-| investigation | 답을 소유 | 질문 | 근거 붙은 설명 또는 비교표가 있는 권고. 외부 기술 비교는 출처·버전 명시 |
+| investigation | 답을 소유 | 질문 | 근거 붙은 설명 또는 비교표가 있는 권고. 외부 기술 비교는 출처·버전 명시. 정형 템플릿(답·흐름·관련 테스트·근거), 요청 시 `.docs/investigation/`에 문서 |
 | review | 판정을 소유 | diff·브랜치·PR | 발견 사항(위치·근거·심각도)과 판정 |
 | diagnosis | 진단을 소유, 수정은 아님 | 증상·로그 | 원인 보고서. bug-fix 1단계에서 멈춤 |
 | design | 설계를 소유, 코드는 아님 | 정해진 요구 | 설계·계획 문서. feature 1~3단계에서 멈춤 |
@@ -122,8 +122,9 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
 - 색인은 `skills/dwarf/references/principles.md`. 라우터가 시작 시 색인을 읽고, 적용하는 원칙만 leaf를 읽는다. leaf를 읽은 원칙 중 결정을 바꾼 것만 답변에 이름과 바뀐 결정을 적는다.
 - 접두사 `p-`는 leaf 스킬과 구분하고 `/` 메뉴에서 한 덩어리로 모이게 하기 위한 것. pstack의 `principle-`와 같은 역할.
 - playbook과 leaf 스킬은 판단 단계 옆에 `p-<name>`을 적고, 절차 단계에는 붙이지 않는다.
-- v1 12개. 범위 4(`p-necessary-only`, `p-reuse-first`, `p-respect-structure`, `p-finish-in-scope`), 설계 2(`p-model-the-domain`, `p-fix-root-causes`), 검증 4(`p-prove-it-works`, `p-verifiable-units`, `p-test-behavior`, `p-explain-the-number`), 진행 2(`p-guard-context`, `p-act-before-asking`). pstack tdd의 "나쁜 테스트보다 테스트 없음", 실패 먼저 확인 규칙은 `p-test-behavior`에 흡수. 네 개는 전역 CLAUDE.md 구현 원칙에서 왔고, 다른 harness로 가져가기 위해 저장소에 둔다.
-- 2차 후보와 미룬 이유: attack-the-premise(수정 두 번 실패 뒤에 걸림), exhaust-the-design-space(prototype 없음), separate-shared-state·idempotent(병렬 worker 없음), build-the-lever·encode-lessons(dwarf 자체를 키울 때), minimize-reader-load(reviewer brief 한 줄이 먼저).
+- 13개. 범위 4(`p-necessary-only`, `p-reuse-first`, `p-respect-structure`, `p-finish-in-scope`), 설계 2(`p-model-the-domain`, `p-fix-root-causes`), 검증 4(`p-prove-it-works`, `p-verifiable-units`, `p-test-behavior`, `p-explain-the-number`), 진행 3(`p-guard-context`, `p-act-before-asking`, `p-summary-first`). pstack tdd의 "나쁜 테스트보다 테스트 없음", 실패 먼저 확인 규칙은 `p-test-behavior`에 흡수. 네 개는 전역 CLAUDE.md 구현 원칙에서 왔고, 다른 harness로 가져가기 위해 저장소에 둔다.
+- `p-summary-first`는 2차 후보 minimize-reader-load를 사용자 요청으로 당겨 왔다. 모든 답변에 걸리므로 playbook·라우터 단계에 붙이지 않고 색인의 "언제"로만 건다. 라우터 본문과 색인은 둘 다 시작 시 한 번 읽혀 단계에 붙여도 시점이 달라지지 않는다. 보고가 여전히 길면 그때 붙일 곳을 정한다. 전역 지침의 "불필요한 설명 없이"는 군더더기를 빼는 것, 이 원칙은 핵심은 모두 두되 핵심마다 설명을 짧게 하고 깊은 설명은 질문으로 받는 것. 글의 구조는 바꾸지 않는다.
+- 2차 후보와 미룬 이유: attack-the-premise(수정 두 번 실패 뒤에 걸림), exhaust-the-design-space(prototype 없음), separate-shared-state·idempotent(병렬 worker 없음), build-the-lever·encode-lessons(dwarf 자체를 키울 때).
 
 ## leaf 스킬
 
@@ -154,6 +155,6 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
 
 | 항목 | 선택지 | 임시 기본값 |
 |---|---|---|
-| 산출물 위치 | 프로젝트 `.docs/` / `docs/` / 산출물 없음 | `.docs/` (gitignore 권장) |
+| 산출물 위치 | 프로젝트 `.docs/` / `docs/` / 산출물 없음 | `<작업 디렉토리>/.docs/` (gitignore 권장). 작업 디렉토리는 세션을 시작한 디렉토리. 저장소 루트·상위 디렉토리·스킬 디렉토리가 아님 |
 | 커밋·PR 시점 | playbook이 자동으로 / 사용자 요청 시만 | 사용자 요청 시만. playbook은 "커밋 준비"까지 |
 | Pi·OMP·Codex 매핑 | 각 도구 확인 후 채움 | Claude Code만 확정, 나머지 미확인 표기 |

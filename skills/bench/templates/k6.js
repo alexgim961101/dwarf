@@ -1,4 +1,4 @@
-// bench 서비스 모드 부하 스크립트 골격. <프로젝트>/.docs/perf/k6.js 로 복사해 채운다.
+// bench 서비스 모드 부하 스크립트 골격. <작업 디렉토리>/.docs/perf/k6.js 로 복사해 채운다.
 // 기준선과 사후에 같은 파일을 쓴다. 실행: k6 run --summary-export /out/summary.json /scripts/k6.js
 import http from 'k6/http';
 import { check } from 'k6';

@@ -19,13 +19,14 @@ disable-model-invocation: true
 | 프로파일 | 언어별. Go `pprof`, Node `--cpu-prof`, Python `py-spy` | 보고하지 않는 run에서만. 프로파일러가 느리게 만듦 |
 | 반복 | 기준선·사후 번갈아 5회(A B A B …). 중앙값과 범위 | 변동 폭보다 작은 차이는 차이 없음 |
 | 환경 기록 | `nproc`, `uptime`의 부하, 이미지 digest, 데이터셋 크기, 날짜 | 머신이 바쁘면 번갈아 돌려 양쪽이 같은 노이즈를 보게 함 |
-| 아티팩트 | `<프로젝트>/.docs/perf/<날짜>-<주제>/{baseline,after}/` | summary JSON, stats CSV, 프로파일, 환경 기록, 재실행 명령 |
+| 위치 | `<작업 디렉토리>/.docs/perf/`. 작업 디렉토리는 세션을 시작한 디렉토리 | 저장소 루트·상위 디렉토리·스킬 디렉토리에 만들지 않는다. 아래 명령의 `.docs/perf/`는 이 기준이고, 명령은 작업 디렉토리에서 실행한다 |
+| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/{baseline,after}/` | summary JSON, stats CSV, 프로파일, 환경 기록, 재실행 명령 |
 | 한계 | 로컬 docker 숫자는 상대 비교. 절대값은 운영 환경이 아님 | 보고에 명시 |
 
 ## 절차
 
 1. 지표와 모드를 정한다. 지표 하나, 데이터셋 크기, 목표치. 이미 정해져 넘어왔으면 그대로 쓴다.
-2. 측정 환경을 준비한다. 프로젝트에 `.docs/perf/compose.yml`이 없으면 `templates/docker-compose.perf.yml`을 복사해 앱 서비스를 채운다. 서비스 모드면 `templates/k6.js`를 복사해 경로와 임계값을 채운다. 작업 모드면 실행 명령과 입력 경로를 적는다. 데이터셋은 고정 파일로 두고 크기를 기록한다.
+2. 측정 환경을 준비한다. 작업 디렉토리에 `.docs/perf/compose.yml`이 없으면 `templates/docker-compose.perf.yml`을 복사해 앱 서비스를 채운다. 서비스 모드면 `templates/k6.js`를 복사해 경로와 임계값을 채운다. 작업 모드면 실행 명령과 입력 경로를 적는다. 데이터셋은 고정 파일로 두고 크기를 기록한다.
 3. 환경을 기록한다.
    ```bash
    { date -Iseconds; nproc; uptime; docker compose -f .docs/perf/compose.yml images --format json; } > .docs/perf/<run>/env.txt
@@ -43,4 +44,4 @@ disable-model-invocation: true
 
 ## 보고
 
-지표와 데이터셋, 기준선 → 사후(중앙값, 범위, 횟수), 오류 수와 처리 건수, limiter, 아티팩트 경로, 재실행 명령 한 줄. 결론은 `p-explain-the-number`의 넷 중 하나.
+지표와 데이터셋, 기준선 → 사후(중앙값, 범위, 횟수), 오류 수와 처리 건수, limiter, 아티팩트 절대 경로, 재실행 명령 한 줄. 결론은 `p-explain-the-number`의 넷 중 하나.

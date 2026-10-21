@@ -37,3 +37,4 @@
 |---|---|---|
 | [컨텍스트 보호](../../p-guard-context/SKILL.md) `p-guard-context` | 긴 파일·큰 출력·넓은 탐색 | 대량 읽기는 explorer에게, 메인에는 포인터와 요약만 |
 | [묻기 전에 해 보기](../../p-act-before-asking/SKILL.md) `p-act-before-asking` | 사용자에게 물으려 할 때 | 실행해서 알 수 있으면 실행한다. 취향·되돌리기 어려운 일만 묻는다 |
+| [요약 먼저](../../p-summary-first/SKILL.md) `p-summary-first` | 최종 답변·보고·문서를 쓰기 전 | 핵심은 빠뜨리지 않고 설명은 짧게. 더 깊은 설명은 질문을 받아서 |
