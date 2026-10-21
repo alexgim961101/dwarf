@@ -24,13 +24,13 @@ skills/
   blast-radius/       # 변경이 diff 밖의 어디를 깨뜨리나
   bench/              # 성능 측정 환경과 교대 측정
   root-cause/         # 재현과 가설 소거로 결함의 메커니즘 확정
-  blueprint/          # 데이터 형태·대안 비교·작업 단위
-  inspect/            # 변경을 의도와 대조해 발견 사항과 판정
+  blueprint/          # 데이터 형태·대안 비교·하위 기능·작업 단위
+  inspect/            # 변경·설계 문서를 의도와 대조해 발견 사항과 판정
 tests/routing.md      # 프롬프트 → 기대 playbook
 docs/design.md        # 설계 기준
 ```
 
-playbook 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore. 원인만·설계만 같은 요청은 해당 playbook을 구현 전에 멈춰 수행한다.
+playbook 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore. 원인만·설계만 같은 요청은 해당 playbook을 구현 전에 멈춰 수행한다. 큰 기능이나 설계 요청은 스펙과 하위 기능별 계획을 `.docs/feature/`에 문서로 쓰고, 각각 독립 검토와 사용자 승인을 거친 뒤 구현한다.
 
 ## 설치
 

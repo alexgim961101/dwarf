@@ -20,7 +20,7 @@
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
 | `skills/blast-radius/` | leaf. 변경이 diff 밖의 어디를 깨뜨리나 |
 | `skills/bench/` | leaf. 성능 측정 환경. `templates/`에 compose·k6 |
-| `skills/root-cause/`, `skills/blueprint/`, `skills/inspect/` | leaf. 결함 원인 확정 / 설계·작업 단위 / 변경 점검·판정 |
+| `skills/root-cause/`, `skills/blueprint/`, `skills/inspect/` | leaf. 결함 원인 확정 / 설계·하위 기능·작업 단위 / 변경·문서 점검·판정 |
 | `tests/routing.md` | 프롬프트 → 기대 playbook 케이스 |
 | `docs/design.md` | 설계 기준. 결정·미결·하지 않는 것 |
 | `install.sh` | `skills/*/`를 각 도구의 skills 디렉토리에 심볼릭 링크 |
@@ -43,7 +43,8 @@
 - 줄 상한. 라우터 `SKILL.md` 80줄, 원칙 leaf 25줄.
 - 형식.
   - 원칙 leaf: 언제 / 규칙 / 왜 / 방법 / 아닌 것.
-  - playbook: 소유 선언, 번호 단계, `**보고:**`. 변경 playbook(bug-fix·perf·feature·refactoring)은 `**멈춤:**`에 멈출 단계, 그때의 보고, 이어 갈 단계를 쓴다.
+  - playbook: 목적 문장(무엇을 하고 무엇을 지키나), 번호 단계, `**보고:**`. 변경 playbook(bug-fix·perf·feature·refactoring)은 `**멈춤:**`에 멈출 단계, 그때의 보고, 이어 갈 단계를 쓴다.
+  - 요청이 없어도 사용자 승인을 기다리는 단계는 번호 단계 `관문 N`으로 두고 그때의 보고를 단계 안에 쓴다. 승인되면 다음 단계로 이어 간다. 남은 단계를 skip하는 멈춤과 다르다.
 - playbook·leaf는 역할 이름(explorer·reviewer·worker)만 쓴다. Agent 이름·모델을 쓰지 않는다.
 - 모든 단계는 역할 매핑이 "없음"이어도 owner가 직접 수행할 수 있게 쓴다.
 - `p-<name>`은 판단 단계 옆에만 붙이고 절차 단계에는 붙이지 않는다.
