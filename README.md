@@ -30,7 +30,7 @@ tests/routing.md      # 프롬프트 → 기대 playbook
 docs/design.md        # 설계 기준
 ```
 
-playbook 10개. brainstorm, investigation, review, diagnosis, design, bug-fix, feature, refactoring, perf, chore.
+playbook 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore. 원인만·설계만 같은 요청은 해당 playbook을 구현 전에 멈춰 수행한다.
 
 ## 설치
 

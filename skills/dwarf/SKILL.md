@@ -21,30 +21,26 @@ disable-model-invocation: true
 ## 분류
 
 ```
-코드 변경 요청인가?
-├─ 아니오. 산출물이
-│    ├─ 무엇을 할지 자체가 미정            → brainstorm
-│    ├─ 기존 코드에 대한 설명·권고          → investigation
-│    ├─ 기존 변경에 대한 판정              → review
-│    ├─ 결함의 원인 보고서                 → diagnosis
-│    └─ 정해진 요구의 설계·계획 문서        → design
-└─ 예. 동작이
-     ├─ 결함 수정으로 바뀜                 → bug-fix
-     ├─ 새 동작 또는 동작 변경             → feature
-     └─ 바뀌지 않음
-          ├─ 구조 변경                     → refactoring
-          ├─ 느림·자원 과다를 측정으로 고침  → perf
-          └─ 의존성·설정·문서·테스트 추가·이름 → chore
+요청이 다루는 것은?
+├─ 무엇을 할지 자체가 미정              → brainstorm
+├─ 기존 코드에 대한 설명·권고            → investigation
+├─ 기존 변경(diff·PR)에 대한 판정        → review
+├─ 결함. 틀린 동작                      → bug-fix
+├─ 느림·자원 과다                       → perf
+├─ 새 동작 또는 동작 변경               → feature
+├─ 동작은 그대로, 구조 변경              → refactoring
+└─ 의존성·설정·문서·테스트 추가·이름      → chore
 ```
 
-- "코드는 건들지 마", "~만 해줘"는 변경 없음으로 읽는다. 둘에 걸치면 코드 변경이 있는 쪽.
+- 멈춤. "원인만", "설계만", "계획만", "알아만", "코드는 건들지 마"처럼 변경을 빼면 bug-fix·perf·feature·refactoring을 그 playbook의 `**멈춤:**`대로 멈춘다. 그 뒤 단계는 todo에 `skip: 변경 없음 요청`으로 둔다.
+- 질문(brainstorm·investigation·review)과 변경에 걸치면 변경 쪽. 변경 지시가 함께 있으면 멈추지 않는다.
 - 사용자가 playbook이나 단계를 이름으로 지정하면 그 지정이 분류보다 우선한다.
 - 어디에도 맞지 않으면 아래 "playbook 없음".
 
 ## 재라우팅
 
-- 변경 없는 playbook(brainstorm, investigation, review, diagnosis, design) 도중 코드 변경이 필요해지면 사용자에게 알리고 다음 playbook을 제안한다. 멋대로 넘어가지 않는다.
-- diagnosis 뒤 "고쳐"는 bug-fix 2단계부터, design 승인 뒤 "진행"은 feature 4단계부터. 앞 결과를 다시 하지 않는다.
+- brainstorm·investigation·review 도중이나 멈춤으로 수행하는 중에 코드 변경이 필요해지면 사용자에게 알리고 다음 playbook이나 이어 갈 단계를 제안한다. 멋대로 넘어가지 않는다.
+- 멈춘 뒤 "고쳐"·"진행"은 같은 playbook에서 skip한 첫 단계부터 이어 간다. 앞 결과를 다시 하지 않는다.
 - chore에서 설계 판단이 생기면 feature로, refactoring·perf에서 동작 변경이 필요하면 멈추고 알린다. 지금까지의 변경은 유지한다.
 
 ## 실행

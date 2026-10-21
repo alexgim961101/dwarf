@@ -14,7 +14,7 @@
 | 경로 | 역할 |
 |---|---|
 | `skills/dwarf/SKILL.md` | 라우터. 인자 해석, 분류 트리, 재라우팅, 실행 규칙 |
-| `skills/dwarf/playbooks/` | 작업 유형별 단계 10개. brainstorm, investigation, review, diagnosis, design, bug-fix, feature, refactoring, perf, chore |
+| `skills/dwarf/playbooks/` | 작업 유형별 단계 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore |
 | `skills/dwarf/references/` | 공유 참조. `roles`(역할·brief), `agents`(Agent 선택·기록), `harness`(도구별 매핑), `principles`(원칙 색인) |
 | `skills/p-<name>/` | 원칙 leaf 13개. 적용할 때만 읽음 |
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
@@ -43,7 +43,7 @@
 - 줄 상한. 라우터 `SKILL.md` 80줄, 원칙 leaf 25줄.
 - 형식.
   - 원칙 leaf: 언제 / 규칙 / 왜 / 방법 / 아닌 것.
-  - playbook: 소유 선언, 번호 단계, `**보고:**`.
+  - playbook: 소유 선언, 번호 단계, `**보고:**`. 변경 playbook(bug-fix·perf·feature·refactoring)은 `**멈춤:**`에 멈출 단계, 그때의 보고, 이어 갈 단계를 쓴다.
 - playbook·leaf는 역할 이름(explorer·reviewer·worker)만 쓴다. Agent 이름·모델을 쓰지 않는다.
 - 모든 단계는 역할 매핑이 "없음"이어도 owner가 직접 수행할 수 있게 쓴다.
 - `p-<name>`은 판단 단계 옆에만 붙이고 절차 단계에는 붙이지 않는다.
