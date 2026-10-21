@@ -32,8 +32,9 @@ disable-model-invocation: true
 └─ 의존성·설정·문서·테스트 추가·이름      → chore
 ```
 
-- 멈춤. "원인만", "설계만", "계획만", "알아만", "코드는 건들지 마"처럼 변경을 빼면 bug-fix·perf·feature·refactoring을 그 playbook의 `**멈춤:**`대로 멈춘다. 그 뒤 단계는 todo에 `skip: 변경 없음 요청`으로 둔다.
-- 질문(brainstorm·investigation·review)과 변경에 걸치면 변경 쪽. 변경 지시가 함께 있으면 멈추지 않는다.
+- 멈춤 요청. 코드는 바꾸지 말고 원인·설계·계획까지만 달라는 요청이다. 예: "원인 분석해줘", "원인만", "설계만", "계획 세워 줘", "알아만 봐", "코드는 건들지 마". bug-fix·perf·feature·refactoring을 각 playbook의 `**멈춤:**` 단계까지 수행하고, 남은 단계는 todo에 `skip: 변경 없음 요청`으로 둔다.
+- "고쳐"처럼 변경 지시가 함께 있거나 증상만 말하면 멈춤 요청이 아니다.
+- 질문(brainstorm·investigation·review)과 변경에 걸치면 변경 쪽.
 - 사용자가 playbook이나 단계를 이름으로 지정하면 그 지정이 분류보다 우선한다.
 - 어디에도 맞지 않으면 아래 "playbook 없음".
 
