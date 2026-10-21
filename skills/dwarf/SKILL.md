@@ -28,10 +28,11 @@ disable-model-invocation: true
 ├─ 결함. 틀린 동작                      → bug-fix
 ├─ 느림·자원 과다                       → perf
 ├─ 새 동작 또는 동작 변경               → feature
-├─ 동작은 그대로, 구조 변경              → refactoring
-└─ 의존성·설정·문서·테스트 추가·이름      → chore
+├─ 동작은 그대로, 구조·이름을 판단해 바꿈 → refactoring
+└─ 의존성·설정·문서·테스트 추가, 정해진 이름·위치 변경 → chore
 ```
 
+- 이름·위치 변경은 무엇으로 바꿀지 판단이 필요하면 refactoring("더 명확한 이름으로", "알맞은 모듈로"), 바꿀 결과가 정해져 있으면 chore("A를 B로", "정한 경로로").
 - 멈춤 요청. 코드는 바꾸지 말고 원인·설계·계획까지만 달라는 요청이다. 예: "원인 분석해줘", "원인만", "설계만", "계획 세워 줘", "알아만 봐", "코드는 건들지 마". bug-fix·perf·feature·refactoring을 각 playbook의 `**멈춤:**` 단계까지 수행하고, 남은 단계는 todo에 `skip: 변경 없음 요청`으로 둔다.
 - "고쳐"처럼 변경 지시가 함께 있거나 증상만 말하면 멈춤 요청이 아니다.
 - 질문(brainstorm·investigation·review)과 변경에 걸치면 변경 쪽.
@@ -42,7 +43,7 @@ disable-model-invocation: true
 
 - brainstorm·investigation·review 도중이나 멈춤으로 수행하는 중에 코드 변경이 필요해지면 사용자에게 알리고 다음 playbook이나 이어 갈 단계를 제안한다. 멋대로 넘어가지 않는다.
 - 멈춘 뒤 "고쳐"·"진행"은 같은 playbook에서 skip한 첫 단계부터 이어 간다. 앞 결과를 다시 하지 않는다.
-- chore에서 설계 판단이 생기면 feature로, refactoring·perf에서 동작 변경이 필요하면 멈추고 알린다. 지금까지의 변경은 유지한다.
+- chore에서 판단이 생기면 동작이 그대로면 refactoring으로, 바뀌면 feature로. refactoring·perf에서 동작 변경이 필요하면 멈추고 알린다. 지금까지의 변경은 유지한다.
 
 ## 실행
 

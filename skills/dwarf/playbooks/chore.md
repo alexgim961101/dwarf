@@ -7,6 +7,6 @@
 3. 확인 명령을 실행하고 출력을 본다(`p-prove-it-works`). 의존성 갱신은 변경 로그의 breaking change를 읽고, 걸리는 것이 있으면 `blast-radius` 스킬로 실제 호출을 돌려 확인한다.
 4. 커밋 준비. 한 chore는 한 커밋. 커밋은 사용자 요청이 있을 때.
 
-설계 판단이 생기면 feature로, 동작이 바뀌면 bug-fix 또는 feature로 알리고 재매칭한다. 지금까지의 변경은 유지한다.
+무엇으로 바꿀지 판단이 생기면 동작이 그대로면 refactoring으로, 동작이 바뀌면 bug-fix 또는 feature로 알리고 재매칭한다. 지금까지의 변경은 유지한다.
 
 **보고:** 바꾼 것, 확인 명령과 출력, 영향(의존성이면 breaking change 여부).
