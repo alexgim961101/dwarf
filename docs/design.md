@@ -83,6 +83,7 @@ dwarf/
   - 검토하고 채택하지 않은 것. 요청할 때만 끄기(`--solo`, "서브에이전트 없이"): 질문은 줄지만 사용자가 기억해야 한다. 설정으로 매번 묻기 켜기: 설정 항목이 늘고 필요가 아직 없다. 실행 전에는 실제 위임 여부를 모르고(how는 복잡도를 실행 중에 판정) `p-act-before-asking`과도 긴장이 있지만, 사용자가 통제를 택했다.
 - 위임 도구가 없는 harness는 모든 역할 "없음". playbook의 모든 단계는 역할이 없어도 owner가 직접 수행할 수 있게 쓴다.
 - brief는 자기완결. Agent가 dwarf 파일을 읽지 않아도 일이 되어야 한다. 형식은 `references/roles.md`.
+- 위임 여부와 Agent 선택(매핑된 Agent만 쓰고 바꾸지 않음, `none`이나 "사용 안 함"이면 owner가 직접, leaf 단독 호출 시 매핑 읽는 순서)은 `references/roles.md` 한 곳에 두고 how·why·inspect가 참조한다. leaf마다 다른 것은 직접 수행 방식뿐.
 
 ## playbook v1
 

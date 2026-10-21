@@ -21,7 +21,9 @@ disable-model-invocation: true
    | 코드 자체. 마이그레이션, 설정 변경, 같은 시기의 인접 변경 | 소스 관리 investigator가 함께 본다 | source-control.md에 포함 |
 
    같은 종류의 출처가 두 번 필요해지면 playbook을 추가한다.
-3. 출처마다 explorer 하나를 `references/investigator-brief.md`로 동시에 보낸다. 앵커를 채우고 그 출처의 playbook을 끝에 붙인다. 한 explorer에 출처 둘을 맡기지 않는다. brief 첫 줄 "읽기만 한다"는 MCP 도구가 쓰기를 할 수 있으므로 빼지 않는다. explorer 매핑이 없으면 owner가 같은 brief 순서로 소스 관리부터 직접 조사한다.
+3. 출처별로 조사한다. 위임 여부와 Agent는 `../dwarf/references/roles.md`의 "위임 여부와 Agent"를 따른다.
+   - 위임. 출처마다 explorer 하나를 `references/investigator-brief.md`로 동시에 보낸다. 앵커를 채우고 그 출처의 playbook을 끝에 붙인다. 한 explorer에 출처 둘을 맡기지 않는다. brief 첫 줄 "읽기만 한다"는 MCP 도구가 쓰기를 할 수 있으므로 빼지 않는다.
+   - 직접. owner가 같은 brief 순서로 소스 관리부터 직접 조사한다.
 4. owner가 종합한다. 보고를 그대로 붙이지 않는다. 인용은 원문을 열어 한 번 더 확인한다.
 5. 주장마다 등급을 붙인다.
 
