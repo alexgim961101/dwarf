@@ -22,7 +22,7 @@ disable-model-invocation: true
 | 반복 | 비교하는 코드를 번갈아 5회(A B A B …, 셋이면 A B C A B C …). 중앙값과 범위 | 변동 폭보다 작은 차이는 차이 없음 |
 | 환경 기록 | `nproc`, `uptime`의 부하, 이미지 digest, 데이터셋 크기, 날짜 | 머신이 바쁘면 번갈아 돌려 양쪽이 같은 노이즈를 보게 함 |
 | 위치 | `<작업 디렉토리>/.docs/perf/`. 작업 디렉토리는 세션을 시작한 디렉토리 | 저장소 루트·상위 디렉토리·스킬 디렉토리에 만들지 않는다. 아래 명령의 `.docs/perf/`는 이 기준이고, 명령은 작업 디렉토리에서 실행한다 |
-| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/<코드 이름>/`. 기본 `baseline`, `after`. 원인 제거 실험은 `good`, `current`, `removed` | summary JSON, stats CSV, 프로파일, 함수 계측, 환경 기록, 재실행 명령 |
+| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/<코드 이름>/`. `<날짜>`는 `YYYY-MM-DD`, `<주제>`는 영문 kebab-case. 기본 `baseline`, `after`. 원인 제거 실험은 `good`, `current`, `removed` | summary JSON, stats CSV, 프로파일, 함수 계측, 환경 기록, 재실행 명령 |
 | 한계 | 로컬 docker 숫자는 상대 비교. 절대값은 운영 환경이 아님 | 보고에 명시 |
 
 ## 절차
