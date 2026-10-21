@@ -1,13 +1,13 @@
 # Agent 선택
 
-Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있는 Agent 중에서 역할마다 하나를 고르고, dwarf는 그 선택을 기록만 한다. 사용자가 파일을 만들거나 고치지 않는다.
+Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있는 Agent 중에서 역할마다 하나를 고르고, 원하면 위임할 때 쓸 model·effort도 고른다. dwarf는 그 선택을 기록만 한다. 사용자가 파일을 만들거나 고치지 않는다.
 
 ## 어디서 읽나
 
 1. 작업 루트의 `.dwarf/agents.md`. 현재 디렉토리에서 위로 올라가며 처음 만나는 것. 프로젝트나 워크스페이스 전용 Agent(예: 특정 워크스페이스 조사자)를 그 안에서만 쓰고 싶을 때 둔다. git 레포가 아닌 루트에도 둘 수 있다.
 2. 없으면 `~/.config/dwarf/agents.md`.
 
-둘 다 같은 형식. 작업 루트 파일은 사용자가 직접 두거나 `/dwarf agents --here`로 dwarf가 쓴다. 작업 루트 파일에 없는 역할은 사용자 홈 파일의 값을 쓴다.
+둘 다 같은 형식. 작업 루트 파일은 사용자가 직접 두거나 `/dwarf agents --here`로 dwarf가 쓴다. 작업 루트 파일에 없는 역할은 사용자 홈 파일의 값을 쓴다. 역할의 model·effort는 그 역할의 Agent를 읽은 파일에서만 읽는다.
 
 ## 언제
 
@@ -30,8 +30,12 @@ Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있�
    | reviewer | 독립 리뷰를 맡길 Agent는? | `general-purpose` |
    | worker | 구현을 위임할 Agent는? | 없음 |
 
-3. 기록. `~/.config/dwarf/agents.md`에 현재 harness 블록을 쓴다. `--here`면 작업 루트 `.dwarf/agents.md`에 쓴다. 디렉토리가 없으면 만든다. 다른 harness 블록은 건드리지 않는다.
-4. 선택 결과를 답변에 한 줄로 적고 원래 작업을 계속한다.
+3. 역할마다 model·effort를 묻는다. 2에서 `none`이 아닌 역할만. 위임 도구가 model·effort를 받지 않거나 받는지 미확인인 harness는 묻지 않는다.
+   - 후보는 위임 도구가 받는 값 그대로. Claude Code는 `Agent` 도구 스키마의 `model`(현재 별칭 `opus`·`sonnet`·`haiku`·`fable`)과 `effort`(현재 `low`·`medium`·`high`·`xhigh`·`max`). 세션 컨텍스트에 별칭이 가리키는 모델이 보이면 옵션 설명에 적는다.
+   - 모델별 지원 effort는 따로 확인하지 않는다. 고른 모델이 지원하지 않는 레벨은 지원 레벨 중 그 이하 최고로 실행된다.
+   - 첫 옵션은 "Agent 정의대로 (기본)". Claude Code는 문항당 옵션 4개, 호출당 4문항까지다. 옵션에 못 넣은 값은 질문 문장에 적고 "Other"로 받는다. 문항이 넘치면 나눠 묻는다.
+4. 기록. `~/.config/dwarf/agents.md`에 현재 harness 블록을 쓴다. `--here`면 작업 루트 `.dwarf/agents.md`에 쓴다. 디렉토리가 없으면 만든다. 다른 harness 블록은 건드리지 않는다. model·effort는 "Agent 정의대로"가 아닌 것만 쓴다.
+5. 선택 결과를 답변에 한 줄로 적고 원래 작업을 계속한다.
 
 ## 기록 형식
 
@@ -42,9 +46,12 @@ Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있�
 ## claude-code
 updated: 2026-10-20
 explorer: Explore
+explorer.model: haiku
+explorer.effort: low
 reviewer: general-purpose
 worker: none
 ```
 
 - harness마다 `## <harness>` 블록 하나. 처음 쓰는 harness에서는 그 블록만 추가로 묻는다.
 - 값은 Agent 이름 그대로. 없음은 `none`.
+- `<역할>.model`·`<역할>.effort`는 선택. 값은 위임 도구가 받는 그대로. 없으면 넘기지 않고 Agent 정의와 세션 설정을 따른다.

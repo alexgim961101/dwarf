@@ -49,7 +49,7 @@ disable-model-invocation: true
 
 ## 실행
 
-1. 위임 여부를 묻는다. 매칭한 playbook과 현재 매핑(`explorer=…, reviewer=…, worker=…`)을 보이고 이번 실행에서 서브에이전트를 쓸지 고르게 한다. Claude Code는 `AskUserQuestion`, 다른 도구는 번호 목록. 선택지는 "사용 (매핑대로)"(기본)과 "사용 안 함 (owner가 직접)".
+1. 위임 여부를 묻는다. 매칭한 playbook과 현재 매핑(`explorer=…, reviewer=…, worker=…`. 기록된 model·effort는 함께)을 보이고 이번 실행에서 서브에이전트를 쓸지 고르게 한다. Claude Code는 `AskUserQuestion`, 다른 도구는 번호 목록. 선택지는 "사용 (매핑대로)"(기본)과 "사용 안 함 (owner가 직접)".
    - 묻지 않는 경우. 요청에 이미 정해져 있다("서브에이전트 없이" 등). 같은 playbook을 이어 간다(앞 선택 유지. playbook이 바뀌면 다시 묻는다). 이번 실행에서 매핑을 막 골랐다. 매핑이 모두 `none`이거나 위임 도구가 없다.
    - "사용 안 함"이면 이번 실행 동안 모든 역할을 `none`으로 본다. 매핑 파일은 바꾸지 않는다.
 2. 매칭한 playbook을 열고 단계를 todo에 그대로 복사한다. 맨 위에 위임 선택을 적는다. todo 도구가 없으면 답변에 목록으로 두고 단계마다 갱신한다.

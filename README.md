@@ -9,10 +9,10 @@
 |---|---|
 | `/dwarf <목표>` | 분류 → 서브에이전트 사용 여부 선택 → playbook 단계를 todo에 복사 → 수행 → 보고 |
 | `/dwarf 새 작업 <목표>` | 진행 중 playbook을 버리고 재매칭 |
-| `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent를 다시 고름 |
+| `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent와 model·effort를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |
 
-최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
+최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 Agent와 model·effort(선택)를 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
 
 ## 구조
 

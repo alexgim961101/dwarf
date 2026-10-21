@@ -9,7 +9,7 @@
 - owner는 메인 세션 하나. 작업의 소유·판단·구현·종합은 owner가 한다.
 - 위임은 두 경우만. 대량 읽기(컨텍스트 보호)와 독립 리뷰. 구현 위임은 기본 꺼짐.
 - dwarf가 정하는 것은 역할이다. 어떤 역할이 필요하고, 그 역할에 무엇을 어떻게 맡기는지(brief, 위임 지시문)까지.
-- 그 역할을 맡을 Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있는 Agent(내장·직접 정의·플러그인) 중에서 역할마다 하나를 고른다. Agent의 모델·도구·시스템 프롬프트는 그 Agent를 정의한 쪽의 책임이다.
+- 그 역할을 맡을 Agent는 dwarf가 만들지 않는다. 사용자가 자기 환경에 이미 있는 Agent(내장·직접 정의·플러그인) 중에서 역할마다 하나를 고른다. Agent의 도구·시스템 프롬프트와 기본 모델은 그 Agent를 정의한 쪽의 책임이다. 사용자가 역할마다 model·effort를 고르면 dwarf는 위임 호출에 그 값을 넘기기만 한다.
 - 자동 트리거 없음. `/dwarf` 명시 호출로만 시작한다.
 - 작게 시작한다. playbook·leaf·규칙은 같은 필요가 두 번 보일 때 추가한다.
 
@@ -79,6 +79,8 @@ dwarf/
 - 최초 실행에서 매핑이 없으면 dwarf가 harness의 Agent 후보를 열거해 역할마다 묻고, 선택을 `~/.config/dwarf/agents.md`에 스스로 기록한다. 사용자는 고르기만 한다. `/dwarf agents`로 다시 고른다.
 - 매핑은 작업 루트 `.dwarf/agents.md`가 있으면 그것을, 없으면 `~/.config/dwarf/agents.md`를 읽는다. 워크스페이스 전용 조사 Agent(예: retailtrend-agent)를 그 워크스페이스에서만 explorer로 쓰는 첫 필요가 생겨 추가.
 - 기록된 Agent가 이 세션에 없으면 기본값으로 대체하고 답변에 한 줄 적는다.
+- 역할마다 model·effort를 선택으로 고른다. `/dwarf agents`에서 Agent 다음에 묻고 `<역할>.model`·`<역할>.effort`로 기록해 위임 호출에 넘긴다. 내장 Agent(`Explore`, `general-purpose`)는 정의 파일을 고칠 수 없어 호출 파라미터가 유일한 경로라 추가한 사용자 결정. 기록이 없으면 넘기지 않아 기존 매핑 파일과 호환된다. 후보는 위임 도구가 받는 값이고 모델별 지원 effort는 확인하지 않는다. 지원하지 않는 레벨은 그 이하 최고로 내려 실행되고, 지원 표를 두면 모델이 바뀔 때 낡는다.
+  - 검토하고 채택하지 않은 것. 실행마다 선택: 실행 시작 질문이 매번 는다. Agent 정의 파일로만 해결(이전 입장): 내장 Agent에 적용할 수 없다. 버전 고정: `Agent` 호출은 별칭만 받아 dwarf가 할 수 없다. 필요하면 Agent 정의 frontmatter에서 한다.
 - 실행마다 위임 여부를 묻는다. playbook을 매칭한 뒤 1단계 전에 "사용 (매핑대로)" / "사용 안 함 (owner가 직접)". 비용·속도·컨텍스트를 실행 단위로 사용자가 정하게 하려는 사용자 결정. 요청에 이미 정해져 있거나, 같은 playbook을 이어 가거나, 매핑을 막 골랐거나, 위임할 Agent가 없으면 묻지 않는다. "사용 안 함"은 그 실행 동안 모든 역할을 `none`으로 보고 매핑 파일은 바꾸지 않는다.
   - 검토하고 채택하지 않은 것. 요청할 때만 끄기(`--solo`, "서브에이전트 없이"): 질문은 줄지만 사용자가 기억해야 한다. 설정으로 매번 묻기 켜기: 설정 항목이 늘고 필요가 아직 없다. 실행 전에는 실제 위임 여부를 모르고(how는 복잡도를 실행 중에 판정) `p-act-before-asking`과도 긴장이 있지만, 사용자가 통제를 택했다.
 - 위임 도구가 없는 harness는 모든 역할 "없음". playbook의 모든 단계는 역할이 없어도 owner가 직접 수행할 수 있게 쓴다.
@@ -136,7 +138,7 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
   - 여러 줄의 절차다. 한 줄짜리는 playbook이나 원칙에 둔다.
   - playbook 없이도 입력·출력이 성립한다. leaf는 playbook을 모르므로 단독으로 의미가 있어야 한다.
 - 책임. leaf는 절차와 출력을 정한다. 멈춤·사용자 보고 항목·다음 playbook은 쓰지 않는다. 그건 playbook과 라우터의 몫.
-- 분리 완료: `how`(동작·구조 파악. 7개 playbook에서 반복), `why`(동기·이력 조사. 4개 playbook에서 반복). why는 출처별 playbook을 `references/sources/`에 둔다. v1은 소스 관리(항상)와 Jira(Atlassian MCP가 보일 때) 둘. 문서·채팅·관측은 brief의 일반 지시로 조사하고, 같은 출처가 두 번 필요해지면 추가. 구조는 pstack how·why(MIT)를 참고했고 문장은 새로 썼다. pstack과 다른 점은 종합을 별도 explainer·synthesizer가 아니라 owner가 하고, 모델을 지정하지 않는 것.
+- 분리 완료: `how`(동작·구조 파악. 7개 playbook에서 반복), `why`(동기·이력 조사. 4개 playbook에서 반복). why는 출처별 playbook을 `references/sources/`에 둔다. v1은 소스 관리(항상)와 Jira(Atlassian MCP가 보일 때) 둘. 문서·채팅·관측은 brief의 일반 지시로 조사하고, 같은 출처가 두 번 필요해지면 추가. 구조는 pstack how·why(MIT)를 참고했고 문장은 새로 썼다. pstack과 다른 점은 종합을 별도 explainer·synthesizer가 아니라 owner가 하고, 모델을 dwarf가 정하지 않는 것(사용자가 고른 model·effort만 넘긴다).
 - 분리 완료: `blast-radius`(변경이 diff 밖의 어디를 깨뜨리나. 확신 5단계 사다리와 안전 근거 하나의 실행 증명. investigation·review·feature·refactoring·chore 5곳). `bench`(성능 측정 환경과 N회 교대 측정. perf 전용이지만 compose·k6 템플릿을 동반하는 절차라 playbook 안에 둘 수 없어 leaf). 둘 다 구조는 pstack blast-radius·benchmark-checklist 참고, 문장은 새로 썼다.
 - 분리 기준의 예외: 템플릿·스크립트 같은 파일을 동반하는 절차는 한 playbook만 써도 leaf로 둔다.
 - 분리 완료: `root-cause`(재현·가설 소거·메커니즘. diagnosis·bug-fix. perf의 원인 파악은 측정 기반이라 제외), `blueprint`(데이터 형태·대안 비교·작업 단위. design·feature. bug-fix·perf의 "함수 경계를 넘으면 대안 둘"은 한 줄이라 playbook에 둔다), `inspect`(점검 목록·발견 사항 형식·reviewer 위임. review·bug-fix·feature·refactoring·perf. playbook마다 다른 중심 질문은 입력으로 받는다). 각 leaf는 상태·미결·판정을 돌려주고, 그것을 보고 멈출지는 playbook이 정한다.
@@ -148,7 +150,7 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
 
 ## 하지 않는 것
 
-- 모델·effort 설정 파일. Agent 정의 파일. 페르소나 Agent.
+- dwarf가 정하는 모델·effort 기본값. Agent 정의 파일. 페르소나 Agent.
 - 세션 지속성 hook. compaction 후 드리프트가 실제로 보이면 검토.
 - PR 운영·배포·오케스트레이션 playbook. 배포·롤백·데이터 재계산·force push는 `~/skills`의 운영 스킬 영역.
 - 학습 자료·문서 생성 자체가 목적인 작업.
