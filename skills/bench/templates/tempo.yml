@@ -1,0 +1,21 @@
+# bench 추적 run 용 Tempo 최소 설정. compose.trace.yml 과 같은 디렉토리에 둔다.
+# OTLP(4317 gRPC, 4318 HTTP)를 받아 컨테이너 안 로컬 디스크에 저장하고 3200 으로 조회한다.
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal

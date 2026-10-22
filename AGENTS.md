@@ -19,7 +19,7 @@
 | `skills/p-<name>/` | 원칙 leaf 14개. 적용할 때만 읽음 |
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
 | `skills/blast-radius/` | leaf. 변경이 diff 밖의 어디를 깨뜨리나 |
-| `skills/bench/` | leaf. 성능 측정 환경. `templates/`에 compose·k6 |
+| `skills/bench/` | leaf. 성능 측정 환경. `templates/`에 compose·k6·추적(compose 오버라이드·tempo) |
 | `skills/root-cause/`, `skills/blueprint/`, `skills/inspect/` | leaf. 결함 원인 확정 / 설계·하위 기능·작업 단위 / 변경·문서 점검·판정 |
 | `tests/routing.md` | 프롬프트 → 기대 playbook 케이스 |
 | `docs/design.md` | 설계 기준. 결정·미결·하지 않는 것 |

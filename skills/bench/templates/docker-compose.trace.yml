@@ -1,0 +1,29 @@
+# bench 추적 run 오버라이드. <작업 디렉토리>/.docs/perf/compose.trace.yml 로 복사하고 tempo.yml 도 같은 곳에 둔다.
+# compose.yml 에 겹쳐 쓴다: docker compose -f .docs/perf/compose.yml -f .docs/perf/compose.trace.yml up -d tempo app
+# 보고하지 않는 run 에서만 켠다. 계측이 숫자를 바꾼다.
+services:
+  app:
+    environment:
+      OTEL_SERVICE_NAME: app
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: none
+      OTEL_LOGS_EXPORTER: none
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4318
+    # 계측 의존성은 이 컨테이너 안에만 설치한다. 작업 트리·lockfile 은 바꾸지 않는다. 언어에 맞는 한 줄을 고르고 버전을 고정한다.
+    # Node:   command: sh -c "npm i --no-save @opentelemetry/api@<버전> @opentelemetry/auto-instrumentations-node@<버전> && node --require @opentelemetry/auto-instrumentations-node/register <진입점>"
+    # Python: command: sh -c "pip install opentelemetry-distro==<버전> opentelemetry-exporter-otlp==<버전> && opentelemetry-bootstrap -a install && opentelemetry-instrument <원래 명령>"
+    # JVM:    command: sh -c "curl -sSL -o /tmp/otel.jar https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v<버전>/opentelemetry-javaagent.jar && java -javaagent:/tmp/otel.jar <원래 인자>"
+    # Go:     자동 계측 없음. 측정용 worktree 에서 otelhttp·otelsql 로 감싸고 build.context 를 그 worktree 로 바꾼다.
+    # 이미지에 패키지 관리자가 없으면(멀티스테이지 운영 이미지) 측정용 worktree 에 설치하고 build.context 를 그 worktree 로 바꾼다.
+    depends_on:
+      - tempo
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./tempo.yml:/etc/tempo.yml:ro
+    # 저장 경로 /var/tempo 는 호스트에 바인드하지 않는다(이미지 사용자 10001 의 쓰기 권한 문제). run 을 내리면 사라지고 아티팩트는 조회 JSON 으로 남긴다.
+    ports:
+      - "3200:3200"             # 조회 API. 호스트에서 curl

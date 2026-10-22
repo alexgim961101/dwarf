@@ -1,6 +1,6 @@
 ---
 name: bench
-description: 성능 측정 환경을 docker compose로 세우고, 비교하는 코드들을 같은 조건에서 번갈아 N회 측정해 아티팩트를 남긴다. 서비스 모드(부하 → 지연·처리량), 작업 모드(입력 → 완료 시간·메모리), 함수 계측(구간 시간·함수 비교). 임시 도구는 작업 트리를 바꾸지 않고 쓴다.
+description: 성능 측정 환경을 docker compose로 세우고, 비교하는 코드들을 같은 조건에서 번갈아 N회 측정해 아티팩트를 남긴다. 서비스 모드(부하 → 지연·처리량), 작업 모드(입력 → 완료 시간·메모리), 함수 계측(구간 시간·함수 비교). 원인은 OpenTelemetry 추적(Tempo)과 서비스별 전용 프로파일러로 찾는다. 계측 의존성은 측정 이미지·worktree에만 설치하고 작업 트리는 바꾸지 않는다.
 disable-model-invocation: true
 ---
 
@@ -16,13 +16,14 @@ disable-model-invocation: true
 | 대상 | 프로젝트의 compose 서비스. 비교하는 코드(기본은 기준선과 사후, 원인 제거 실험이면 정상 버전·현재·원인 제거)끼리는 코드만 다르고 이미지 베이스·설정·데이터셋·환경변수는 같음 | 한쪽만 기본 설정이면 구현이 아니라 설정을 비교한 것 |
 | 부하 생성기 | 서비스 모드 `grafana/k6` 스크립트 하나, `--summary-export`로 JSON. 작업 모드는 실행 명령과 `/usr/bin/time -v` | k6가 먼저 포화되면 측정한 것은 k6. 부하기 CPU도 기록 |
 | 자원 계측 | `docker stats --no-stream --format` 1초 샘플링 → CSV | Prometheus·cAdvisor·Grafana는 시계열 그래프가 필요해질 때 추가 |
-| 프로파일 | 언어별. Go `pprof`, Node `--cpu-prof`, Python `py-spy` | 보고하지 않는 run에서만. 프로파일러가 느리게 만듦 |
+| 추적 | 요청 안 시간 분포. OpenTelemetry 자동 계측 → Tempo(OTLP 수신, 로컬 저장). `templates/docker-compose.trace.yml`·`tempo.yml`을 compose에 겹쳐 켠다. 언어별 자동 계측: Node `--require @opentelemetry/auto-instrumentations-node/register`, Python `opentelemetry-instrument`, JVM `-javaagent:opentelemetry-javaagent.jar`. Go는 자동 계측이 없어 측정용 worktree에서 `otelhttp`·`otelsql`로 감싸거나 프로파일로 대신 | 보고하지 않는 run에서만. 조회는 Tempo HTTP API에 TraceQL(`{ duration > 300ms }`)로 하고 Grafana는 두지 않는다. DB 쿼리·외부 호출·직렬화 중 어디서 시간이 가는지를 프로파일보다 먼저 본다 |
+| 프로파일 | CPU·할당 핫스팟. 서비스마다 전용 도구. 앱은 언어별: Go `pprof`, Node `--cpu-prof`, Python `py-spy`, JVM JFR·`async-profiler`. 백킹 서비스도 전용: PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)`·`pg_stat_statements`·`auto_explain`, MySQL `EXPLAIN ANALYZE`·slow query log, Redis `SLOWLOG`·`--latency` | 보고하지 않는 run에서만. 프로파일러가 느리게 만듦. 추적이 가리킨 서비스·구간에 집중한다 |
 | 함수 계측 | 요청 안 구간 시간: 언어 내장 도구(Node `perf_hooks`, Go `runtime/trace`, Python `cProfile`)나 임시 타이머. 함수 하나 비교: 언어별 벤치 도구(Go `testing.B`, Python `pytest-benchmark`, Node `tinybench`)로 비교하는 코드마다 같은 입력 | 구간 계측은 보고하지 않는 run에서만. 타이머도 숫자를 바꿈. 함수 비교는 그 자체가 측정이라 반복 규칙을 따름 |
-| 임시 도구·의존성 | 설치 없이 실행(`npx --yes 패키지@버전`, `uvx 패키지@버전`, `go run 모듈@버전`, docker 이미지)을 먼저 씀. 프로젝트 의존성이 꼭 필요하면 측정용 worktree에서만 설치. 버전 고정 | 작업 트리·lockfile·전역 환경은 바꾸지 않음. 임시 타이머 코드도 worktree에만 |
+| 임시 도구·의존성 | 계측·프로파일 의존성은 적극 설치해 쓴다. 측정 이미지 안(`compose.trace.yml`의 command에서 `npm i --no-save`, `pip install`, jar 다운로드)이 먼저. 이미지에 패키지 관리자가 없거나 코드 변경이 필요하면(Go 계측, 임시 타이머) 측정용 worktree에 설치·수정하고 거기서 빌드. 단독 도구는 설치 없이 실행(`npx --yes 패키지@버전`, `uvx 패키지@버전`, `go run 모듈@버전`, docker 이미지). 버전 고정 | 작업 트리·lockfile·전역 환경은 바꾸지 않음. 설치한 것은 7단계에서 지움 |
 | 반복 | 비교하는 코드를 번갈아 5회(A B A B …, 셋이면 A B C A B C …). 중앙값과 범위 | 변동 폭보다 작은 차이는 차이 없음 |
 | 환경 기록 | `nproc`, `uptime`의 부하, 이미지 digest, 데이터셋 크기, 날짜 | 머신이 바쁘면 번갈아 돌려 양쪽이 같은 노이즈를 보게 함 |
 | 위치 | `<작업 디렉토리>/.docs/perf/`. 작업 디렉토리는 세션을 시작한 디렉토리 | 저장소 루트·상위 디렉토리·스킬 디렉토리에 만들지 않는다. 아래 명령의 `.docs/perf/`는 이 기준이고, 명령은 작업 디렉토리에서 실행한다 |
-| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/<코드 이름>/`. `<날짜>`는 `YYYY-MM-DD`, `<주제>`는 영문 kebab-case. 기본 `baseline`, `after`. 원인 제거 실험은 `good`, `current`, `removed` | summary JSON, stats CSV, 프로파일, 함수 계측, 환경 기록, 재실행 명령 |
+| 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/<코드 이름>/`. `<날짜>`는 `YYYY-MM-DD`, `<주제>`는 영문 kebab-case. 기본 `baseline`, `after`. 원인 제거 실험은 `good`, `current`, `removed` | summary JSON, stats CSV, 추적 조회 JSON, 프로파일, 함수 계측, 환경 기록, 재실행 명령 |
 | 한계 | 로컬 docker 숫자는 상대 비교. 절대값은 운영 환경이 아님 | 보고에 명시 |
 
 ## 절차
@@ -41,10 +42,21 @@ disable-model-invocation: true
    docker compose -f .docs/perf/compose.yml down
    ```
    작업 모드는 k6 대신 `docker compose run --rm app <명령>`을 `/usr/bin/time -v`로 감싸 완료 시간과 최대 RSS를 받는다.
-5. 보고하지 않는 run을 하나 더 돌려 프로파일을 받고 핫스팟을 소스에 대응시킨다. limiter를 지목한다. 함수별 시간이 필요하면 같은 run에서 구간 계측을 넣는다. 의심 함수 하나를 코드끼리 비교하려면 벤치 도구로 4단계처럼 번갈아 5회 잰다.
+5. 보고하지 않는 run을 따로 돌려 시간이 가는 곳을 찾는다. 추적 → 프로파일 순서. 자동 계측이 없는 언어(Go)거나 서비스가 하나고 외부 호출이 없으면 프로파일부터.
+   - 추적 run. `templates/docker-compose.trace.yml`·`tempo.yml`을 `.docs/perf/`에 복사해 app의 계측 command를 언어에 맞게 채운다. 같은 부하 스크립트로 1회. 작업 모드는 k6 대신 app 명령을 1회.
+     ```bash
+     docker compose -f .docs/perf/compose.yml -f .docs/perf/compose.trace.yml up -d tempo app
+     docker compose -f .docs/perf/compose.yml -f .docs/perf/compose.trace.yml run --rm k6 run /scripts/k6.js
+     curl -sG http://localhost:3200/api/search --data-urlencode 'q={ duration > 300ms }' --data-urlencode limit=20 > .docs/perf/<run>/traces.json   # 느린 trace 목록. 비어 있으면 10초 뒤 다시
+     curl -s http://localhost:3200/api/traces/<traceID> | tee .docs/perf/<run>/trace-<traceID>.json | jq -r '.batches[].scopeSpans[].spans[] | [(((.endTimeUnixNano|tonumber)-(.startTimeUnixNano|tonumber))/1e6), .name] | @tsv' | sort -rn | head   # span별 ms
+     docker compose -f .docs/perf/compose.yml -f .docs/perf/compose.trace.yml down
+     ```
+     느린 trace 여럿에서 반복되는 span(쿼리, 외부 호출, 직렬화)을 소스에 대응시킨다. 요청 하나에 같은 쿼리 span이 N개면 N+1, 긴 span 하나면 그 쿼리·호출, span 사이 빈 시간이면 앱 CPU.
+   - 프로파일 run. 추적이 가리킨 서비스에 전용 도구를 쓴다. 앱 CPU면 언어 프로파일러, DB면 `EXPLAIN (ANALYZE, BUFFERS)`, Redis면 `SLOWLOG`. 핫스팟을 소스에 대응시키고 limiter를 지목한다.
+   - 함수별 시간이 필요하면 같은 run에서 구간 계측을 넣는다. 의심 함수 하나를 코드끼리 비교하려면 벤치 도구로 4단계처럼 번갈아 5회 잰다.
 6. 결과를 모은다. 라운드마다 지표값을 표로, 중앙값과 범위, 오류 수, 처리 건수. 함수 계측이 있으면 함수별 호출 수와 총·평균 시간. 재실행 명령을 `README.md`에 적어 아티팩트 디렉토리에 둔다.
-7. 정리한다. 측정용 worktree와 임시로 받은 도구를 지우고 `git status`로 작업 트리가 시작할 때와 같은지 본다.
+7. 정리한다. 추적·프로파일 run의 컨테이너를 내리고, 측정용 worktree와 임시로 받은 도구를 지우고 `git status`로 작업 트리가 시작할 때와 같은지 본다.
 
 ## 보고
 
-지표와 데이터셋, 비교한 코드별 중앙값·범위·횟수, 오류 수와 처리 건수, limiter, 함수별 시간(있으면), 아티팩트 절대 경로, 재실행 명령 한 줄. 결론은 `p-explain-the-number`의 넷 중 하나. 단위는 지표 이름에 한 번 적고 셀에는 숫자만(`p-unify-units`).
+지표와 데이터셋, 비교한 코드별 중앙값·범위·횟수, 오류 수와 처리 건수, limiter, 추적이 가리킨 느린 span과 프로파일 핫스팟, 함수별 시간(있으면), 아티팩트 절대 경로, 재실행 명령 한 줄. 결론은 `p-explain-the-number`의 넷 중 하나. 단위는 지표 이름에 한 번 적고 셀에는 숫자만(`p-unify-units`).

@@ -55,7 +55,7 @@ dwarf/
     why/SKILL.md             # leaf. 동기·이력 조사. 출처별 explorer, 신뢰도 등급
     why/references/          # investigator-brief.md, sources/{source-control,jira}.md
     blast-radius/SKILL.md    # leaf. 변경이 diff 밖의 어디를 깨뜨리나. 안전의 근거 하나를 실행으로 증명
-    bench/SKILL.md           # leaf. 성능 측정 환경. templates/{docker-compose.perf.yml,k6.js}
+    bench/SKILL.md           # leaf. 성능 측정 환경. templates/{docker-compose.perf.yml,k6.js,docker-compose.trace.yml,tempo.yml}
     root-cause/SKILL.md      # leaf. 재현과 가설 소거로 처음 잘못된 지점·메커니즘 확정. 수정 없음
     blueprint/SKILL.md       # leaf. 데이터 형태, 대안 비교, 하위 기능과 검증으로 끝나는 작업 단위. 코드 없음
     inspect/SKILL.md         # leaf. 변경·설계 문서를 의도와 대조. 발견 사항·판정, reviewer 위임
@@ -148,7 +148,7 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
   - playbook 없이도 입력·출력이 성립한다. leaf는 playbook을 모르므로 단독으로 의미가 있어야 한다.
 - 책임. leaf는 절차와 출력을 정한다. 멈춤·사용자 보고 항목·다음 playbook은 쓰지 않는다. 그건 playbook과 라우터의 몫.
 - 분리 완료: `how`(동작·구조 파악. 7개 playbook에서 반복), `why`(동기·이력 조사. 4개 playbook에서 반복). why는 출처별 playbook을 `references/sources/`에 둔다. v1은 소스 관리(항상)와 Jira(Atlassian MCP가 보일 때) 둘. 문서·채팅·관측은 brief의 일반 지시로 조사하고, 같은 출처가 두 번 필요해지면 추가. 구조는 pstack how·why(MIT)를 참고했고 문장은 새로 썼다. pstack과 다른 점은 종합을 별도 explainer·synthesizer가 아니라 owner가 하고, 모델을 dwarf가 정하지 않는 것(사용자가 고른 model·effort만 넘긴다).
-- 분리 완료: `blast-radius`(변경이 diff 밖의 어디를 깨뜨리나. 확신 5단계 사다리와 안전 근거 하나의 실행 증명. investigation·review·feature·refactoring·chore 5곳). `bench`(성능 측정 환경과 N회 교대 측정. perf 전용이지만 compose·k6 템플릿을 동반하는 절차라 playbook 안에 둘 수 없어 leaf. 함수 계측은 요청 안 구간 시간과 함수 하나 비교. 측정 도구는 언어 내장 → 설치 없이 실행 → 측정용 worktree에서만 설치 순서로 쓰고 작업 트리·lockfile·전역 환경은 바꾸지 않는다). 둘 다 구조는 pstack blast-radius·benchmark-checklist 참고, 문장은 새로 썼다.
+- 분리 완료: `blast-radius`(변경이 diff 밖의 어디를 깨뜨리나. 확신 5단계 사다리와 안전 근거 하나의 실행 증명. investigation·review·feature·refactoring·chore 5곳). `bench`(성능 측정 환경과 N회 교대 측정. perf 전용이지만 compose·k6 템플릿을 동반하는 절차라 playbook 안에 둘 수 없어 leaf. 함수 계측은 요청 안 구간 시간과 함수 하나 비교. 원인 찾기는 추적(OpenTelemetry 자동 계측 → Tempo, TraceQL로 조회. Grafana 없이 API) → 서비스별 전용 프로파일러(언어 프로파일러, `EXPLAIN ANALYZE`, `SLOWLOG`) 순서로 보고하지 않는 run에서만. 추적은 DB 쿼리·외부 호출·직렬화 중 어디서 시간이 가는지를 프로파일보다 먼저 보여 주고, 프로파일은 추적이 가리킨 곳에 집중한다. 계측·프로파일 의존성은 적극 설치하되 측정 이미지 안 → 측정용 worktree 순서이고 단독 도구는 설치 없이 실행. 작업 트리·lockfile·전역 환경은 바꾸지 않는다. 추적 도입은 사용자 요청). 둘 다 구조는 pstack blast-radius·benchmark-checklist 참고, 문장은 새로 썼다.
 - 분리 기준의 예외: 템플릿·스크립트 같은 파일을 동반하는 절차는 한 playbook만 써도 leaf로 둔다.
 - 기준 미달 상태로 유지: `root-cause`·`blueprint`는 diagnosis·design을 bug-fix·feature의 멈춤으로 합치면서 쓰는 playbook이 하나씩으로 줄었다. 단독 호출(`/root-cause`, `/blueprint`)로 입력·출력이 성립하고 여러 줄의 절차라 그대로 둔다. playbook으로 되돌릴지는 미결.
 - 분리 완료: `root-cause`(재현·가설 소거·메커니즘. bug-fix. perf의 원인 파악은 측정 기반이라 제외), `blueprint`(데이터 형태·대안 비교·하위 기능·작업 단위. feature가 3단계 설계, 6단계 분할로 나눠 부른다. bug-fix·perf의 "함수 경계를 넘으면 대안 둘"은 한 줄이라 playbook에 둔다), `inspect`(점검 목록·발견 사항 형식·reviewer 위임. review·bug-fix·feature·refactoring·perf. playbook마다 다른 중심 질문은 입력으로 받는다. 대상은 변경과 설계·계획 문서. 문서 검토는 feature만 쓰지만 판정·reviewer 위임이 같아 새 leaf를 두지 않고 점검 목록과 reviewer brief만 문서용을 둔다). 각 leaf는 상태·미결·판정을 돌려주고, 그것을 보고 멈출지는 playbook이 정한다.
