@@ -135,8 +135,9 @@ playbook은 다른 playbook을 포함하지 않는다. playbook은 순서·멈�
 - 색인은 `skills/dwarf/references/principles.md`. 라우터가 시작 시 색인을 읽고, 적용하는 원칙만 leaf를 읽는다. leaf를 읽은 원칙 중 결정을 바꾼 것만 답변에 이름과 바뀐 결정을 적는다.
 - 접두사 `p-`는 leaf 스킬과 구분하고 `/` 메뉴에서 한 덩어리로 모이게 하기 위한 것. pstack의 `principle-`와 같은 역할.
 - playbook과 leaf 스킬은 판단 단계 옆에 `p-<name>`을 적고, 절차 단계에는 붙이지 않는다.
-- 13개. 범위 4(`p-necessary-only`, `p-reuse-first`, `p-respect-structure`, `p-finish-in-scope`), 설계 2(`p-model-the-domain`, `p-fix-root-causes`), 검증 4(`p-prove-it-works`, `p-verifiable-units`, `p-test-behavior`, `p-explain-the-number`), 진행 3(`p-guard-context`, `p-act-before-asking`, `p-summary-first`). pstack tdd의 "나쁜 테스트보다 테스트 없음", 실패 먼저 확인 규칙은 `p-test-behavior`에 흡수. 네 개는 전역 CLAUDE.md 구현 원칙에서 왔고, 다른 harness로 가져가기 위해 저장소에 둔다.
+- 14개. 범위 4(`p-necessary-only`, `p-reuse-first`, `p-respect-structure`, `p-finish-in-scope`), 설계 2(`p-model-the-domain`, `p-fix-root-causes`), 검증 4(`p-prove-it-works`, `p-verifiable-units`, `p-test-behavior`, `p-explain-the-number`), 진행 4(`p-guard-context`, `p-act-before-asking`, `p-summary-first`, `p-unify-units`). pstack tdd의 "나쁜 테스트보다 테스트 없음", 실패 먼저 확인 규칙은 `p-test-behavior`에 흡수. 네 개는 전역 CLAUDE.md 구현 원칙에서 왔고, 다른 harness로 가져가기 위해 저장소에 둔다.
 - `p-summary-first`는 2차 후보 minimize-reader-load를 사용자 요청으로 당겨 왔다. 모든 답변에 걸리므로 playbook·라우터 단계에 붙이지 않고 색인의 "언제"로만 건다. 라우터 본문과 색인은 둘 다 시작 시 한 번 읽혀 단계에 붙여도 시점이 달라지지 않는다. 보고가 여전히 길면 그때 붙일 곳을 정한다. 전역 지침의 "불필요한 설명 없이"는 군더더기를 빼는 것, 이 원칙은 핵심은 모두 두되 핵심마다 설명을 짧게 하고 깊은 설명은 질문으로 받는 것. 글의 구조는 바꾸지 않는다.
+- `p-unify-units`는 사용자 요청으로 추가. 보고에서 같은 양을 ms와 초로 번갈아 적어 혼동한 일이 반복됐다. `p-explain-the-number`는 숫자가 무엇을 쟀는지(타당성), 이 원칙은 숫자를 어떻게 적는지(표기)라 나눈다. 수치가 나오는 모든 답변에 걸리므로 색인의 "언제"로 걸고, 단위를 정하는 perf 1단계와 `bench` 보고에만 붙인다.
 - 2차 후보와 미룬 이유: attack-the-premise(수정 두 번 실패 뒤에 걸림), exhaust-the-design-space(prototype 없음), separate-shared-state·idempotent(병렬 worker 없음), build-the-lever·encode-lessons(dwarf 자체를 키울 때).
 
 ## leaf 스킬

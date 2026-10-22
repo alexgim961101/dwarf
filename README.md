@@ -19,7 +19,7 @@
 ```
 skills/
   dwarf/              # 라우터. SKILL.md, playbooks/, references/
-  p-<name>/           # 원칙 13개. 적용할 때만 읽음
+  p-<name>/           # 원칙 14개. 적용할 때만 읽음
   how/  why/          # 동작·구조 파악, 동기·이력 조사
   blast-radius/       # 변경이 diff 밖의 어디를 깨뜨리나
   bench/              # 성능 측정 환경과 교대 측정
