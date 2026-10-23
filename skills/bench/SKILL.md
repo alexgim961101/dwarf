@@ -20,7 +20,7 @@ disable-model-invocation: true
 | 프로파일 | CPU·할당 핫스팟. 서비스마다 전용 도구. 앱은 언어별: Go `pprof`, Node `--cpu-prof`, Python `py-spy`, JVM JFR·`async-profiler`. 백킹 서비스도 전용: PostgreSQL `EXPLAIN (ANALYZE, BUFFERS)`·`pg_stat_statements`·`auto_explain`, MySQL `EXPLAIN ANALYZE`·slow query log, Redis `SLOWLOG`·`--latency` | 보고하지 않는 run에서만. 프로파일러가 느리게 만듦. 추적이 가리킨 서비스·구간에 집중한다 |
 | 함수 계측 | 요청 안 구간 시간: 언어 내장 도구(Node `perf_hooks`, Go `runtime/trace`, Python `cProfile`)나 임시 타이머. 함수 하나 비교: 언어별 벤치 도구(Go `testing.B`, Python `pytest-benchmark`, Node `tinybench`)로 비교하는 코드마다 같은 입력 | 구간 계측은 보고하지 않는 run에서만. 타이머도 숫자를 바꿈. 함수 비교는 그 자체가 측정이라 반복 규칙을 따름 |
 | 임시 도구·의존성 | 계측·프로파일 의존성은 적극 설치해 쓴다. 측정 이미지 안(`compose.trace.yml`의 command에서 `npm i --no-save`, `pip install`, jar 다운로드)이 먼저. 이미지에 패키지 관리자가 없거나 코드 변경이 필요하면(Go 계측, 임시 타이머) 측정용 worktree에 설치·수정하고 거기서 빌드. 단독 도구는 설치 없이 실행(`npx --yes 패키지@버전`, `uvx 패키지@버전`, `go run 모듈@버전`, docker 이미지). 버전 고정 | 작업 트리·lockfile·전역 환경은 바꾸지 않음. 설치한 것은 7단계에서 지움 |
-| 반복 | 비교하는 코드를 번갈아 5회(A B A B …, 셋이면 A B C A B C …). 중앙값과 범위 | 변동 폭보다 작은 차이는 차이 없음 |
+| 반복 | 비교하는 코드를 번갈아 3회(A B A B …, 셋이면 A B C A B C …). 중앙값과 범위. 범위가 겹치거나 판정이 경계면 횟수를 늘린다 | 범위가 겹치면 차이를 보이지 못한 것이고 같다는 뜻이 아니다. 판정은 `p-explain-the-number` |
 | 환경 기록 | `nproc`, `uptime`의 부하, 이미지 digest, 데이터셋 크기, 날짜 | 머신이 바쁘면 번갈아 돌려 양쪽이 같은 노이즈를 보게 함 |
 | 위치 | `<작업 디렉토리>/.docs/perf/`. 작업 디렉토리는 세션을 시작한 디렉토리 | 저장소 루트·상위 디렉토리·스킬 디렉토리에 만들지 않는다. 아래 명령의 `.docs/perf/`는 이 기준이고, 명령은 작업 디렉토리에서 실행한다 |
 | 아티팩트 | `<작업 디렉토리>/.docs/perf/<날짜>-<주제>/<코드 이름>/`. `<날짜>`는 `YYYY-MM-DD`, `<주제>`는 영문 kebab-case. 기본 `baseline`, `after`. 원인 제거 실험은 `good`, `current`, `removed` | summary JSON, stats CSV, 추적 조회 JSON, 프로파일, 함수 계측, 환경 기록, 재실행 명령 |
@@ -34,7 +34,7 @@ disable-model-invocation: true
    ```bash
    { date -Iseconds; nproc; uptime; docker compose -f .docs/perf/compose.yml images --format json; } > .docs/perf/<run>/env.txt
    ```
-4. 한 라운드를 돈다. 비교하는 코드마다 띄우고 측정하고 내린다. 이것을 5회 번갈아 반복한다. 한 라운드의 서비스 모드 명령.
+4. 한 라운드를 돈다. 비교하는 코드마다 띄우고 측정하고 내린다. 이것을 3회 번갈아 반복한다. 첫 라운드 전에 같은 부하로 워밍업 run을 한 번 돌려 버린다(차가운 DB 캐시·JIT). 한 라운드의 서비스 모드 명령.
    ```bash
    docker compose -f .docs/perf/compose.yml up -d app
    docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}}' app >> .docs/perf/<run>/stats.csv &  # 1초 루프로 감싼다
@@ -51,10 +51,10 @@ disable-model-invocation: true
      curl -s http://localhost:3200/api/traces/<traceID> | tee .docs/perf/<run>/trace-<traceID>.json | jq -r '.batches[].scopeSpans[].spans[] | [(((.endTimeUnixNano|tonumber)-(.startTimeUnixNano|tonumber))/1e6), .name] | @tsv' | sort -rn | head   # span별 ms
      docker compose -f .docs/perf/compose.yml -f .docs/perf/compose.trace.yml down
      ```
-     느린 trace 여럿에서 반복되는 span(쿼리, 외부 호출, 직렬화)을 소스에 대응시킨다. 요청 하나에 같은 쿼리 span이 N개면 N+1, 긴 span 하나면 그 쿼리·호출, span 사이 빈 시간이면 앱 CPU.
+     느린 trace 여럿에서 반복되는 span(쿼리, 외부 호출, 직렬화)을 소스에 대응시킨다. 요청 하나에 같은 쿼리 span이 N개면 N+1, 긴 span 하나면 그 쿼리·호출, span 사이 빈 시간이면 앱 CPU. trace의 소속은 불변식으로 확인한다(요청 하나의 쿼리·getMore 수). 비동기 컨텍스트를 잃는 Promise 라이브러리를 쓰면 다른 요청의 span이 섞인다. Tempo 저장소는 run을 내리면 사라지므로 다시 분석할 때는 저장한 trace JSON을 쓴다.
    - 프로파일 run. 추적이 가리킨 서비스에 전용 도구를 쓴다. 앱 CPU면 언어 프로파일러, DB면 `EXPLAIN (ANALYZE, BUFFERS)`, Redis면 `SLOWLOG`. 핫스팟을 소스에 대응시키고 limiter를 지목한다.
-   - 함수별 시간이 필요하면 같은 run에서 구간 계측을 넣는다. 의심 함수 하나를 코드끼리 비교하려면 벤치 도구로 4단계처럼 번갈아 5회 잰다.
-6. 결과를 모은다. 라운드마다 지표값을 표로, 중앙값과 범위, 오류 수, 처리 건수. 함수 계측이 있으면 함수별 호출 수와 총·평균 시간. 재실행 명령을 `README.md`에 적어 아티팩트 디렉토리에 둔다.
+   - 함수별 시간이 필요하면 같은 run에서 구간 계측을 넣는다. 의심 함수 하나를 코드끼리 비교하려면 벤치 도구로 4단계처럼 번갈아 3회 잰다.
+6. 결과를 모은다. 라운드마다 지표값을 표로, 중앙값과 범위, 오류 수, 처리 건수. 백분위는 표본 수 n과 함께 적는다. 함수 계측이 있으면 함수별 호출 수와 총·평균 시간. 재실행 명령을 `README.md`에 적어 아티팩트 디렉토리에 둔다.
 7. 정리한다. 추적·프로파일 run의 컨테이너를 내리고, 측정용 worktree와 임시로 받은 도구를 지우고 `git status`로 작업 트리가 시작할 때와 같은지 본다.
 
 ## 보고

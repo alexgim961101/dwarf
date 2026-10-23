@@ -29,7 +29,7 @@
 | [증거로 완료](../../p-prove-it-works/SKILL.md) `p-prove-it-works` | 완료라고 말하기 전, 위임 결과를 받았을 때 | 검증 명령을 실행하고 출력을 본 뒤에만 완료. 한 것과 못 한 것을 구분 |
 | [작은 단위로 검증](../../p-verifiable-units/SKILL.md) `p-verifiable-units` | 여러 단계 작업을 나눌 때, 커밋 순서를 정할 때 | 단위마다 검증으로 끝내고 하나씩 확인한다 |
 | [동작을 테스트](../../p-test-behavior/SKILL.md) `p-test-behavior` | 테스트를 쓰거나 바꿀 때, 리팩터링 안전망 | 관찰 가능한 동작을 단언한다. 구현은 단언하지 않는다 |
-| [숫자를 설명하라](../../p-explain-the-number/SKILL.md) `p-explain-the-number` | 성능 숫자를 보고하기 전 | limiter를 지목하고 다른 것을 측정한 가능성을 배제한다. 횟수·범위를 숫자 옆에 |
+| [숫자를 설명하라](../../p-explain-the-number/SKILL.md) `p-explain-the-number` | 성능 숫자를 보고하기 전 | limiter를 지목하고 다른 것을 측정한 가능성을 배제한다. 판정 기준은 측정 전에, 횟수·범위·n은 숫자 옆에 |
 
 ## 진행
 
@@ -37,5 +37,5 @@
 |---|---|---|
 | [컨텍스트 보호](../../p-guard-context/SKILL.md) `p-guard-context` | 긴 파일·큰 출력·넓은 탐색 | 대량 읽기는 explorer에게, 메인에는 포인터와 요약만 |
 | [묻기 전에 해 보기](../../p-act-before-asking/SKILL.md) `p-act-before-asking` | 사용자에게 물으려 할 때 | 실행해서 알 수 있으면 실행한다. 취향·되돌리기 어려운 일만 묻는다 |
-| [요약 먼저](../../p-summary-first/SKILL.md) `p-summary-first` | 최종 답변·보고·문서를 쓰기 전 | 핵심은 빠뜨리지 않고 설명은 짧게. 더 깊은 설명은 질문을 받아서 |
+| [요약 먼저](../../p-summary-first/SKILL.md) `p-summary-first` | 최종 답변·보고·문서를 쓰기 전 | 핵심은 빠뜨리지 않고 설명은 짧게. 더 깊은 설명은 질문을 받아서. 용어는 풀고, 남이 읽을 글은 로컬 흔적 없이 증거로 |
 | [단위 통일](../../p-unify-units/SKILL.md) `p-unify-units` | 측정값·수치를 답변·보고·표에 적을 때 | 같은 양은 한 단위로. 단위는 지표 이름·표 머리에 한 번 |

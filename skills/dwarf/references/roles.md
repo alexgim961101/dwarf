@@ -27,7 +27,7 @@ dwarf가 정하는 것은 역할과 brief(위임 지시문)이다. 그 역할을
 - brief 하나는 질문 하나, 변경 하나, 또는 함께 보는 문서 묶음 하나.
 - 같은 Agent를 이어 쓰지 않는다. 후속 작업은 원래 brief, 추가 지시, 이전 보고를 합친 새 brief로 새 Agent를 띄운다.
 - 여러 explorer는 한 메시지에 동시에 띄운다. 각도가 겹치지 않게 범위를 나눈다.
-- 결과를 받으면 owner가 확인한다. explorer·reviewer 뒤에는 `git status`로 변경이 없는지 본다. worker 뒤에는 diff를 직접 읽는다.
+- 결과를 받으면 owner가 확인한다. explorer·reviewer 뒤에는 `git status`로 변경이 없는지 본다. worker 뒤에는 diff를 직접 읽는다. 결론을 받치는 수치·주장은 두세 개를 원시 데이터나 코드로 다시 확인한다. 틀린 지적은 반영하지 않고 이유와 함께 보고에 적는다.
 - 위임 결과를 답변에 그대로 붙이지 않는다. owner가 자기 말로 요약하고, 근거가 필요한 부분만 인용한다.
 
 ## explorer brief
