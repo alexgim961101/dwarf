@@ -43,7 +43,8 @@ expect "playbook 없음 관문 기록 허용" allow "$(decision PreToolUse Write
 expect "playbook 없음 기록 뒤 Bash 허용" allow "$(decision PreToolUse Bash "npm test")"
 sid=s3
 call PreToolUse Read "$skills/dwarf/references/agents.md" >/dev/null
-expect "agents.md를 읽으면 Bash 허용" allow "$(decision PreToolUse Bash "ls")"
+expect "agents.md를 읽어도 작업 Bash 막음" deny "$(decision PreToolUse Bash "npm test")"
+expect "playbook 열기 전 Agent 매핑 파일 Write 허용" allow "$(decision PreToolUse Write "$HOME/.config/dwarf/agents.md")"
 sid=s4
 call PreToolUse Bash "cat ~/.claude/skills/dwarf/playbooks/chore.md" >/dev/null
 expect "Bash로 playbook을 읽어도 열린 것으로 봄" allow "$(decision PreToolUse Bash "npm test")"

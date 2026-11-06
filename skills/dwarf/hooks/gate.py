@@ -24,15 +24,16 @@ GATE = Path(".docs/dwarf/gate")
 OPEN = {"approved", "none"}
 DWARF = Path(__file__).absolute().parent.parent  # 안내에 쓰는 경로. 모델이 아는 설치 경로 그대로
 SKILLS = Path(__file__).resolve().parent.parent.parent  # 심볼릭 링크를 푼 skills/
-DOC = re.compile(r"(?:playbooks/[a-z-]+|references/agents|inspect/SKILL)\.md")
-DWARF_FILES = re.compile(r"\.claude/skills/|\.config/dwarf/|\.dwarf/agents\.md")
+DOC = re.compile(r"(?:playbooks/[a-z-]+|inspect/SKILL)\.md")
+DWARF_FILES = re.compile(r"\.claude/(?:skills|agents)/|\.config/dwarf/|\.dwarf/agents\.md")
+MAPPING = re.compile(r"/(?:\.config/dwarf|\.dwarf)/agents\.md$")  # references/agents.md의 Agent 매핑 파일
 INSPECT_BEFORE_GATE = {"feature", "incident"}
 INSPECT_AFTER_CHANGE = {"bug-fix", "incident", "feature", "refactoring", "perf"}
 
 NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 Read로 열고 단계를 todo에 복사한 뒤 작업한다.
 그 전에는 Read·Grep과 dwarf 문서·설정을 읽는 Bash만 쓸 수 있다. 파일 수정과 관문 기록은 막힌다.
 - 맞는 playbook이 없으면 <작업 디렉토리>/.docs/dwarf/gate 를 Write 도구로 세 줄로 쓴다. status: none / playbook: 없음 / reason: 맞는 playbook이 없는 이유
-- /dwarf agents는 {DWARF}/references/agents.md 를 읽는다."""
+- Agent 매핑 파일(~/.config/dwarf/agents.md, .dwarf/agents.md)은 playbook 없이 쓸 수 있다. /dwarf agents는 {DWARF}/references/agents.md 를 읽고 이것만 한다."""
 
 NO_INSPECT = (
     "dwarf: playbook의 inspect 점검을 거치지 않고 끝내려 한다. {when} {inspect} 를 읽고 점검한 뒤 "
@@ -245,8 +246,7 @@ def main():
     if len(docs) != len(state.get("docs", [])):
         state["docs"] = sorted(docs)
         save(session, state)
-    opened = state.get("playbook") == "없음" or any(
-        doc.startswith("playbooks/") or doc == "references/agents.md" for doc in docs)
+    opened = state.get("playbook") == "없음" or any(doc.startswith("playbooks/") for doc in docs)
 
     if tool == "Read":
         return
@@ -273,6 +273,8 @@ def main():
         return
 
     if not opened:
+        if MAPPING.search(str(target)):
+            return
         deny(NO_PLAYBOOK)
     if not guarded(root, top, target) or state.get("status") in OPEN:
         return

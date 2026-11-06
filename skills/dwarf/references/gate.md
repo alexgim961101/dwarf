@@ -37,7 +37,7 @@ reason: 해결안 후보 비교를 보고하고 승인을 기다린다
 ## 막는 것과 막지 않는 것
 
 - 막는 것: 작업 트리(세션을 시작한 저장소의 worktree) 안 파일을 Edit·Write·NotebookEdit로 바꾸기.
-- playbook을 열기 전에 막는 것: dwarf 문서·설정을 읽지 않는 Bash, 모든 Edit·Write·NotebookEdit, 관문 기록. Read·Grep은 막지 않는다. playbook 파일을 Read나 Bash로 읽으면 열린 것으로 본다. 예외는 `playbook: 없음` 관문 기록과 `/dwarf agents`의 `references/agents.md`.
+- playbook을 열기 전에 막는 것: dwarf 문서·설정을 읽지 않는 Bash, 모든 Edit·Write·NotebookEdit, 관문 기록. Read·Grep은 막지 않는다. playbook 파일을 Read나 Bash로 읽으면 열린 것으로 본다. 예외는 `playbook: 없음` 관문 기록과 Agent 매핑 파일(`~/.config/dwarf/agents.md`, `.dwarf/agents.md`) 쓰기. `/dwarf agents`는 playbook 없이 이것만 한다.
 - 되돌려 보내는 것: inspect(`../inspect/SKILL.md`)를 읽지 않고 끝내기. 관문 보고 전(`pending`)의 feature·incident, 작업 트리를 바꾸거나 커밋한 뒤(`approved`·`none`)의 bug-fix·incident·feature·refactoring·perf. 한 번만 되돌려 보낸다. 그 단계까지 가지 않았으면 이유를 보고에 넣어 다시 끝낸다.
 - 알리는 것: 관문이 열리기 전에 Bash로 작업 트리를 바꾸면 그 Bash 호출 뒤에 되돌리라고 알린다.
 - 막지 못하는 것: 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload). incident는 playbook 규칙으로 관문 1 전에 실행하지 않는다.
