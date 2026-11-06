@@ -1,6 +1,6 @@
 # 관문 기록
 
-변경 playbook이 작업 트리를 바꿔도 되는지 남기는 기록. Claude Code에서는 `/dwarf`를 부를 때 등록되는 hook(`hooks/gate.py`)이 이 기록 없이 작업 트리를 바꾸지 못하게 막는다.
+변경 playbook이 작업 트리를 바꿔도 되는지 남기는 기록. Claude Code에서는 `/dwarf`를 부를 때 등록되는 hook(`hooks/gate.py`)이 이 기록 없이 작업 트리를 바꾸지 못하게 막는다. 같은 hook이 playbook을 열기 전의 작업과 inspect 점검 없이 끝내기도 막는다.
 
 ## 파일
 
@@ -31,18 +31,21 @@ reason: 해결안 후보 비교를 보고하고 승인을 기다린다
 | incident | 1단계 시작에 `pending`. 관문 1에서 사용자가 조치 조합을 고르면 `approved` |
 | feature | 3단계 관문 판정 결과. 관문 대상이면 `pending`, 아니면 `none`과 이유. 관문 1에서 승인되면 `approved` |
 | refactoring, perf, chore | 작업 트리를 처음 바꾸기 전에 `none`과 이유 |
+| 없음 (맞는 playbook이 없음) | 다른 작업 전에 `none`, `playbook: 없음`과 이유 |
 | investigation, review, brainstorm | 쓰지 않는다. 작업 트리를 바꾸지 않는다 |
 
 ## 막는 것과 막지 않는 것
 
 - 막는 것: 작업 트리(세션을 시작한 저장소의 worktree) 안 파일을 Edit·Write·NotebookEdit로 바꾸기.
+- playbook을 열기 전에 막는 것: dwarf 문서·설정을 읽지 않는 Bash, 모든 Edit·Write·NotebookEdit, 관문 기록. Read·Grep은 막지 않는다. playbook 파일을 Read나 Bash로 읽으면 열린 것으로 본다. 예외는 `playbook: 없음` 관문 기록과 `/dwarf agents`의 `references/agents.md`.
+- 되돌려 보내는 것: inspect(`../inspect/SKILL.md`)를 읽지 않고 끝내기. 관문 보고 전(`pending`)의 feature·incident, 작업 트리를 바꾸거나 커밋한 뒤(`approved`·`none`)의 bug-fix·incident·feature·refactoring·perf. 한 번만 되돌려 보낸다. 그 단계까지 가지 않았으면 이유를 보고에 넣어 다시 끝낸다.
 - 알리는 것: 관문이 열리기 전에 Bash로 작업 트리를 바꾸면 그 Bash 호출 뒤에 되돌리라고 알린다.
 - 막지 못하는 것: 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload). incident는 playbook 규칙으로 관문 1 전에 실행하지 않는다.
-- 막지 않는 것: `.docs/` 아래, 작업 트리 밖 경로, 별도 worktree. 해결안 시험과 원인 조사용 계측은 별도 worktree에서 한다.
+- playbook을 연 뒤 막지 않는 것: `.docs/` 아래, 작업 트리 밖 경로, 별도 worktree. 해결안 시험과 원인 조사용 계측은 별도 worktree에서 한다.
 - 기록은 세션마다 따로 본다. 다른 세션이 남긴 `gate` 파일은 믿지 않는다.
 
 ## 한계
 
-- hook은 Claude Code에서 `/dwarf`를 부른 세션에만 걸린다. `claude -p --resume`으로 이어 간 실행에는 다시 걸리지 않는다(Claude Code 2.1.318에서 확인). 무인 실행은 첫 실행에서 관문 보고까지 하고, 승인 뒤 이어 가는 실행에서 고친다.
+- hook은 Claude Code에서 `/dwarf`를 부른 세션에만 걸린다. `claude -p --resume`으로 이어 간 실행에는 다시 걸리지 않는다. 라우터 frontmatter의 hooks를 `--settings`로 넘기면 걸리고 세션 상태도 이어진다(Claude Code 2.1.319에서 확인. `evals/run.sh`가 이렇게 한다). 무인 실행은 첫 실행에서 관문 보고까지 하고, 승인 뒤 이어 가는 실행에서 고친다.
 - 다른 harness에는 hook이 없다. 기록 규칙만 따른다.
 - 필요: `python3`, `git`.

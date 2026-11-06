@@ -14,6 +14,9 @@ F="$EVALS_DIR/fixtures/$fixture"
 budget=${BUDGET_USD:-5}
 limit=${PHASE_TIMEOUT:-2700}
 timeout_cmd=$(command -v timeout || command -v gtimeout || true)
+# --resume에는 skill hook이 다시 등록되지 않는다. 2단계에는 라우터 frontmatter의 hooks(줄마다 JSON 값)를 settings로 넘긴다.
+hooks=$(sed -n '/^hooks:$/,/^---$/s/^  \(".*\)$/\1/p' "$EVALS_DIR/../skills/dwarf/SKILL.md" \
+  | paste -sd, - | sed 's/.*/{"hooks": {&}}/' | jq -c .)
 
 out="$EVALS_DIR/results/$(date +%Y%m%d-%H%M%S)-$fixture-$model-$rep"
 mkdir -p "$out/state"
@@ -54,7 +57,7 @@ phase() {
   [ -n "$timeout_cmd" ] && cmd=("$timeout_cmd" "$limit")
   cmd+=(claude -p --model "$model" --permission-mode auto --max-budget-usd "$budget"
     --output-format stream-json --verbose)
-  [ -n "$sid" ] && cmd+=(--resume "$sid")
+  [ -n "$sid" ] && cmd+=(--resume "$sid" --settings "$hooks")
   (cd "$ws" && "${cmd[@]}" "$(cat "$prompt")" </dev/null) >"$out/phase$n.jsonl" 2>"$out/phase$n.stderr" || true
   jq -c 'select(.type=="result")' "$out/phase$n.jsonl" | tail -1 >"$out/phase$n.result.json"
   jq -r '.result // ""' "$out/phase$n.result.json" >"$out/phase$n.report.md"

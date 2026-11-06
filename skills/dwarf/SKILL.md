@@ -3,9 +3,10 @@ name: dwarf
 description: 공통 개발 작업의 단일 진입점. 목표를 받아 playbook을 고르고 단계를 수행한다. 호출은 /dwarf 목표, /dwarf 새 작업 목표, /dwarf agents.
 disable-model-invocation: true
 hooks:
-  PreToolUse: [{matcher: "Edit|Write|NotebookEdit|Bash", hooks: [{type: command, command: 'python3 "$HOME/.claude/skills/dwarf/hooks/gate.py"'}]}]
-  PostToolUse: [{matcher: "Bash", hooks: [{type: command, command: 'python3 "$HOME/.claude/skills/dwarf/hooks/gate.py"'}]}]
-  UserPromptSubmit: [{hooks: [{type: command, command: 'python3 "$HOME/.claude/skills/dwarf/hooks/gate.py"'}]}]
+  "PreToolUse": [{"matcher": "Read|Edit|Write|NotebookEdit|Bash", "hooks": [{"type": "command", "command": "python3 \"$HOME/.claude/skills/dwarf/hooks/gate.py\""}]}]
+  "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 \"$HOME/.claude/skills/dwarf/hooks/gate.py\""}]}]
+  "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "python3 \"$HOME/.claude/skills/dwarf/hooks/gate.py\""}]}]
+  "Stop": [{"hooks": [{"type": "command", "command": "python3 \"$HOME/.claude/skills/dwarf/hooks/gate.py\""}]}]
 ---
 
 # dwarf
@@ -66,7 +67,7 @@ hooks:
 
 ## playbook 없음
 
-- todo 첫 줄에 `playbook 없음: <이유>`를 적는다.
+- todo 첫 줄에 `playbook 없음: <이유>`를 적고, 관문에 `status: none`, `playbook: 없음`, 이유를 기록한다(`references/gate.md`).
 - 원칙, 완료 전 검증, 보고 뒤 정리만 적용해 직접 수행한다.
 - 같은 종류의 작업이 두 번 나오면 playbook 추가를 제안한다.
 

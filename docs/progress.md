@@ -16,7 +16,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | - | eval 하네스, 관문 hook, bug-fix·root-cause 보강 | 완료 (`9653ab7`) |
 | - | 판정 자료에 도구 출력 앞뒤 포함(`phaseN.trace.txt`) | 완료 |
 | 3 | `incident` playbook (실행 중인 시스템의 장애) | 완료. 남은 문제 아래 |
-| 4 | 단계 생략 방지 (playbook 미열람, inspect 생략) | 설계·hook 초안·단위 테스트까지. 저장소 미반영 |
+| 4 | 단계 생략 방지 (playbook 미열람, inspect 생략) | hook 반영, 단위 테스트 통과. eval 측정 미실행 |
 | 5 | headless 실행 상태 (todo 대신 상태 파일, `--resume` hook) | 미착수. 확인한 사실만 아래 |
 | 6 | 파이프라인 (Jira intake, Slack 질의, PR leaf) | 미착수 |
 
@@ -67,7 +67,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 - **단일 파일 bind mount 함정**: 설정 파일 하나만 bind mount 했을 때 파일을 새로 쓰면 컨테이너는 옛 내용을 계속 본다. 이 경우를 계획 단계에서 놓치는 실행이 있었다(보강 전 sonnet 1회, 보강 뒤 haiku 2회). 모두 적용 중에 편차를 발견하고 멈춘 뒤 web 재생성 승인을 다시 요청했다. 규칙대로 한 동작이다. 관문 전 `inspect` 점검(#4)으로 잡히는지 볼 것.
 - **판정 천장**: incident 실행 대부분이 만점이다. 차이를 보려면 더 어려운 fixture가 필요하다. 예: 원인이 둘 겹친 장애, 적용 중 예상과 다른 상태.
 
-## 4. 단계 생략 방지 (미반영)
+## 4. 단계 생략 방지
 
 ### 기준선 (기존 eval 실행 50회, 리뷰 전에 멈추는 요청 포함이라 대략값)
 
@@ -76,7 +76,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | playbook을 읽지 않음 | 2/20 | 0/17 | 0/13 |
 | `inspect`를 읽음 | 2/20 | 4/17 | 6/13 |
 
-### 설계 (관문 hook `gate.py` 확장)
+### 바꾼 것 (관문 hook `gate.py` 확장)
 
 - PreToolUse matcher에 `Read`를 더한다. Read 경로와 Bash 명령에 나온 dwarf 문서(`playbooks/*.md`, `references/agents.md`, `inspect/SKILL.md`)를 세션 상태에 기록한다.
 - playbook을 열기 전에는 막는다.
@@ -85,16 +85,19 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
   - 맞는 playbook이 없으면 관문에 `status: none`, `playbook: 없음`, `reason`을 쓰게 한다. `/dwarf agents`는 `references/agents.md`를 읽으면 통과한다.
 - Stop hook을 추가해 inspect를 거치지 않고 끝내려 하면 한 번 되돌려 보낸다(`stop_hook_active`면 허용).
   - 관문 보고 전(`pending`): feature, incident.
-  - 작업 트리를 바꾼 뒤(`approved`·`none`): bug-fix, incident, refactoring, perf.
+  - 작업 트리를 바꾸거나 커밋한 뒤(`approved`·`none`): bug-fix, incident, feature, refactoring, perf. feature는 처음 설계에 없었으나 7단계에 inspect가 있어 넣었다. 커밋하면 diff가 비므로 세션 시작 HEAD와도 비교한다.
 - 주의: Stop은 최종 보고를 쓴 뒤에 걸린다. `claude -p`의 결과는 마지막 메시지이므로, 되돌려 보낼 때 점검 결과를 넣어 보고 전체를 다시 쓰게 한다. 출력 비용이 는다.
-- 초안: 로컬 `.docs/progress/4-hook-draft.patch`. gitignore 대상이라 저장소에는 없다. `git apply`로 `gate.py`와 `tests/gate-hook.sh`에 적용된다. 초안 기준 hook 테스트 35개 중 실패 0개.
-- 반영할 때 함께 바꿀 것: 라우터 frontmatter(`Read` matcher, `Stop`), `references/gate.md`, `AGENTS.md`의 hook 설명, `evals/run.sh`(아래 `--settings`).
+- 처음 초안 패치(`.docs/`)는 다른 머신에 남아 있어 설계를 바탕으로 다시 썼다.
+- 함께 바꾼 것: 라우터 frontmatter(`Read` matcher, `Stop`, 값은 JSON 표기), `references/gate.md`, `AGENTS.md`·`README.md`의 hook 설명, `evals/run.sh`(2단계에 frontmatter hooks를 `--settings`로 넘김).
+- `tests/gate-hook.sh` 38개 판정 모두 PASS(macOS bash 3.2에서 실행).
+- 실제 Claude Code 세션의 동작은 아직 확인하지 않았다. 아래 측정에서 함께 본다.
 
 ### 측정 계획
 
 - 대상: `bugfix-oversell-race`, `feature-partial-cancel`, `ops-stale-dns-fix`, `ops-stale-dns-502`. haiku·sonnet 각 2회.
 - 지표: playbook 미열람률, 리뷰 단계까지 간 실행의 inspect 열람률, 블라인드 판정 점수, 비용·턴 수.
 - inspect를 강제해도 판정 점수가 오르지 않으면 비용을 정당화하기 어렵다. 점수 변화로 판단한다.
+- 기준선 실행 결과(`evals/results/`)는 처음 측정한 머신에만 있다. 블라인드 판정으로 섞어 비교하려면 기준선(`810ccc0`)도 다시 돌린다. 2단계에 hook이 걸리게 된 것도 기준선과 다른 조건이다.
 
 ## 5. headless 실행 (확인한 사실)
 

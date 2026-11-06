@@ -12,7 +12,7 @@
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent와 model·effort를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |
 
-변경 playbook은 작업 트리를 바꾸기 전에 관문을 `.docs/dwarf/gate`에 기록한다. Claude Code에서는 `/dwarf`가 등록하는 hook이 기록 없는 수정과 승인 전 수정을 막는다(`python3`, `git` 필요). 규칙은 `skills/dwarf/references/gate.md`.
+변경 playbook은 작업 트리를 바꾸기 전에 관문을 `.docs/dwarf/gate`에 기록한다. Claude Code에서는 `/dwarf`가 등록하는 hook이 기록 없는 수정과 승인 전 수정, playbook을 열기 전의 작업을 막고, inspect 점검 없이 끝내려 하면 한 번 되돌려 보낸다(`python3`, `git` 필요). 규칙은 `skills/dwarf/references/gate.md`.
 
 최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 Agent와 model·effort(선택)를 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
 

@@ -6,7 +6,7 @@
 
 ```
 evals/
-  run.sh        fixture 하나를 모델 하나로 실행. 관문이 있으면 --resume으로 이어 감
+  run.sh        fixture 하나를 모델 하나로 실행. 관문이 있으면 --resume으로 이어 가고, 이때 라우터 hook을 --settings로 건다
   judge.sh      같은 fixture의 실행들을 이름을 가린 채 판정 모델 하나가 채점
   judge.md      판정 지시
   lib.sh        check.sh가 쓰는 결정적 채점 함수

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """dwarf 관문 hook. /dwarf를 부르면 Claude Code가 등록하고 그 세션 동안 돈다.
 
-- PreToolUse(Edit|Write|NotebookEdit|Bash): 관문 기록 없이 작업 트리 파일을 바꾸려 하면 막는다.
+- PreToolUse(Read|Edit|Write|NotebookEdit|Bash): 읽은 dwarf 문서를 기록한다. playbook을 열기 전에는
+  dwarf 문서를 읽지 않는 Bash와 파일 수정을 막고, 관문 기록 없이 작업 트리 파일을 바꾸려 하면 막는다.
 - PostToolUse(Bash): 관문이 열리기 전에 Bash로 작업 트리가 바뀌었으면 알린다.
 - UserPromptSubmit: 승인 대기(pending) 중에 사용자가 답하면 answered로 바꾼다.
+- Stop: playbook의 inspect 점검을 거치지 않고 끝내려 하면 한 번 되돌려 보낸다.
 
 모델은 <작업 디렉토리>/.docs/dwarf/gate에 기록하고, hook은 Write·Edit로 쓴 기록만 세션별 상태로 받아들인다.
 규칙은 skills/dwarf/references/gate.md.
@@ -11,6 +13,7 @@
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -19,11 +22,28 @@ from pathlib import Path
 
 GATE = Path(".docs/dwarf/gate")
 OPEN = {"approved", "none"}
+DWARF = Path(__file__).absolute().parent.parent  # 안내에 쓰는 경로. 모델이 아는 설치 경로 그대로
+SKILLS = Path(__file__).resolve().parent.parent.parent  # 심볼릭 링크를 푼 skills/
+DOC = re.compile(r"(?:playbooks/[a-z-]+|references/agents|inspect/SKILL)\.md")
+DWARF_FILES = re.compile(r"\.claude/skills/|\.config/dwarf/|\.dwarf/agents\.md")
+INSPECT_BEFORE_GATE = {"feature", "incident"}
+INSPECT_AFTER_CHANGE = {"bug-fix", "incident", "feature", "refactoring", "perf"}
+
+NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 Read로 열고 단계를 todo에 복사한 뒤 작업한다.
+그 전에는 Read·Grep과 dwarf 문서·설정을 읽는 Bash만 쓸 수 있다. 파일 수정과 관문 기록은 막힌다.
+- 맞는 playbook이 없으면 <작업 디렉토리>/.docs/dwarf/gate 를 Write 도구로 세 줄로 쓴다. status: none / playbook: 없음 / reason: 맞는 playbook이 없는 이유
+- /dwarf agents는 {DWARF}/references/agents.md 를 읽는다."""
+
+NO_INSPECT = (
+    "dwarf: playbook의 inspect 점검을 거치지 않고 끝내려 한다. {when} {inspect} 를 읽고 점검한 뒤 "
+    "점검 결과를 넣어 보고 전체를 다시 쓴다. 마지막 메시지만 보고로 남는다. "
+    "그 단계까지 가지 않고 멈췄다면 이유를 한 줄 넣어 보고를 다시 쓴다."
+)
 
 NO_DECISION = """dwarf 관문: 작업 트리를 바꾸기 전에 관문을 기록한다.
 <작업 디렉토리>/.docs/dwarf/gate 를 Write 도구로 세 줄로 쓴다.
 status: pending 또는 none
-playbook: bug-fix, incident, feature, refactoring, perf, chore 중 하나
+playbook: bug-fix, incident, feature, refactoring, perf, chore 중 하나. 맞는 playbook이 없으면 없음
 reason: 한 줄
 - bug-fix는 항상 pending. 해결안 후보는 작업 트리 밖 worktree에서 시험하고 관문 1 보고 뒤 멈춘다.
 - incident는 항상 pending. 관문 1 전에는 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload, 그런 스크립트)도 실행하지 않는다.
@@ -147,6 +167,21 @@ def check_transition(fields, state):
     return None
 
 
+def missing_inspect(state, top):
+    """inspect 점검을 거쳐야 하는 시점인데 inspect를 읽지 않았으면 되돌려 보낼 안내."""
+    if "inspect/SKILL.md" in state.get("docs", []):
+        return None
+    status, playbook = state.get("status"), state.get("playbook")
+    inspect = DWARF.parent / "inspect" / "SKILL.md"
+    if status == "pending" and playbook in INSPECT_BEFORE_GATE:
+        return NO_INSPECT.format(when="관문 보고 전에 점검한다(feature·incident 5단계).", inspect=inspect)
+    if status in OPEN and playbook in INSPECT_AFTER_CHANGE and top and (
+        tree_changes(top)[0] != state.get("baseline") or git(top, "rev-parse", "HEAD") != state.get("head")
+    ):
+        return NO_INSPECT.format(when="작업 트리를 바꿨으면 리뷰 단계에서 점검한다.", inspect=inspect)
+    return None
+
+
 def deny(reason):
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
@@ -167,6 +202,7 @@ def main():
 
     if "baseline" not in state:  # 세션의 첫 hook 호출. 그때의 작업 트리를 기준으로 삼는다
         state["baseline"] = tree_changes(top)[0] if top else None
+        state["head"] = git(top, "rev-parse", "HEAD") if top else None  # 커밋하면 diff가 비므로 HEAD도 본다
         save(session, state)
         prune_old_states()
 
@@ -194,10 +230,30 @@ def main():
             sys.exit(2)
         return
 
-    if event != "PreToolUse" or data.get("tool_name") == "Bash":
+    if event == "Stop":
+        problem = None if data.get("stop_hook_active") else missing_inspect(state, top)
+        if problem:
+            print(json.dumps({"decision": "block", "reason": problem}, ensure_ascii=False))
         return
-    tool_input = data.get("tool_input") or {}
-    raw = tool_input.get("file_path") or tool_input.get("notebook_path")
+
+    if event != "PreToolUse":
+        return
+    tool, tool_input = data.get("tool_name"), data.get("tool_input") or {}
+    raw = (tool_input.get("command") if tool == "Bash"
+           else tool_input.get("file_path") or tool_input.get("notebook_path")) or ""
+    docs = set(state.get("docs", [])) | set(DOC.findall(raw))
+    if len(docs) != len(state.get("docs", [])):
+        state["docs"] = sorted(docs)
+        save(session, state)
+    opened = state.get("playbook") == "없음" or any(
+        doc.startswith("playbooks/") or doc == "references/agents.md" for doc in docs)
+
+    if tool == "Read":
+        return
+    if tool == "Bash":
+        if not opened and not (DWARF_FILES.search(raw) or str(SKILLS) in raw):
+            deny(NO_PLAYBOOK)
+        return
     if not raw:
         return
     target = Path(raw)
@@ -206,7 +262,9 @@ def main():
     target = target.resolve()
 
     if target == gate_path.resolve():
-        fields = parse(new_gate_text(data.get("tool_name"), tool_input, gate_path))
+        fields = parse(new_gate_text(tool, tool_input, gate_path))
+        if not opened and (fields.get("status"), fields.get("playbook")) != ("none", "없음"):
+            deny(NO_PLAYBOOK)
         problem = check_transition(fields, state)
         if problem:
             deny(f"dwarf 관문: {problem}")
@@ -214,6 +272,8 @@ def main():
         save(session, state)
         return
 
+    if not opened:
+        deny(NO_PLAYBOOK)
     if not guarded(root, top, target) or state.get("status") in OPEN:
         return
     deny({"pending": PENDING, "answered": ANSWERED}.get(state.get("status"), NO_DECISION))
