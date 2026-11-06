@@ -17,6 +17,8 @@ timeout_cmd=$(command -v timeout || command -v gtimeout || true)
 # --resume에는 skill hook이 다시 등록되지 않는다. 2단계에는 라우터 frontmatter의 hooks(줄마다 JSON 값)를 settings로 넘긴다.
 hooks=$(sed -n '/^hooks:$/,/^---$/s/^  \(".*\)$/\1/p' "$EVALS_DIR/../skills/dwarf/SKILL.md" \
   | paste -sd, - | sed 's/.*/{"hooks": {&}}/' | jq -c .)
+# 모든 단계에 무인 실행임을 알린다(skills/dwarf/references/headless.md).
+headless_prompt="이 세션은 무인 실행이다. 사용자는 지금 답할 수 없고, 답은 다음 실행의 요청으로 온다."
 
 out="$EVALS_DIR/results/$(date +%Y%m%d-%H%M%S)-$fixture-$model-$rep"
 mkdir -p "$out/state"
@@ -56,7 +58,7 @@ phase() {
   local n=$1 prompt=$2 sid=${3:-} cmd=()
   [ -n "$timeout_cmd" ] && cmd=("$timeout_cmd" "$limit")
   cmd+=(claude -p --model "$model" --permission-mode auto --max-budget-usd "$budget"
-    --output-format stream-json --verbose)
+    --output-format stream-json --verbose --append-system-prompt "$headless_prompt")
   [ -n "$sid" ] && cmd+=(--resume "$sid" --settings "$hooks")
   (cd "$ws" && "${cmd[@]}" "$(cat "$prompt")" </dev/null) >"$out/phase$n.jsonl" 2>"$out/phase$n.stderr" || true
   jq -c 'select(.type=="result")' "$out/phase$n.jsonl" | tail -1 >"$out/phase$n.result.json"
@@ -67,6 +69,9 @@ phase() {
     | tostring | gsub("\n"; " ") | .[0:200])' "$out/phase$n.jsonl" >"$out/phase$n.actions.txt" || true
   echo "## phase$n" >>"$out/checks.txt"
   "$F/hidden/check.sh" "$ws" "phase$n" "$out/state" >>"$out/checks.txt" 2>&1 || true
+  # 무인 실행의 상태 파일(references/headless.md). 단계가 끝날 때의 상태를 남긴다.
+  cp "$ws/.docs/dwarf/state.md" "$out/phase$n.state.md" 2>/dev/null || true
+  echo "INFO state-status $(sed -n 's/^status: *//p' "$out/phase$n.state.md" 2>/dev/null | head -1)" >>"$out/checks.txt"
 }
 
 phase 1 "$F/task.md"

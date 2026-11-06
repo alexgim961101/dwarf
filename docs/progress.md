@@ -17,7 +17,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | - | 판정 자료에 도구 출력 앞뒤 포함(`phaseN.trace.txt`) | 완료 |
 | 3 | `incident` playbook (실행 중인 시스템의 장애) | 완료. 남은 문제 아래 |
 | 4 | 단계 생략 방지 (playbook 미열람, inspect 생략) | 완료. 측정 결과와 남은 문제 아래 |
-| 5 | headless 실행 상태 (todo 대신 상태 파일, `--resume` hook) | 미착수. 확인한 사실만 아래 |
+| 5 | headless 실행 상태 (todo 대신 상태 파일, `--resume` hook) | 완료. 측정 결과 아래 |
 | 6 | 파이프라인 (Jira intake, Slack 질의, PR leaf) | 미착수 |
 
 ## 3. incident
@@ -135,7 +135,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 - **leaf 생략**: haiku가 bug-fix 1단계의 `root-cause`를 읽지 않은 실행이 있다(기준선 1회는 해결안 하나만 내 10/14). hook은 playbook과 inspect만 본다.
 - 모두 한 번씩 나왔다. 같은 필요가 다시 보이면 고친다.
 
-## 5. headless 실행 (확인한 사실)
+## 5. headless 실행
 
 Claude Code 2.1.319, 임시 프로젝트의 skill로 실험했다.
 
@@ -145,8 +145,50 @@ Claude Code 2.1.319, 임시 프로젝트의 skill로 실험했다.
 | `claude -p --resume`으로 이어 가면 skill hook이 다시 등록되나 | 안 된다. 2단계 eval에서는 관문 hook이 꺼져 있다 |
 | `--resume`에 `--settings`로 같은 hook을 넘기면 | `UserPromptSubmit`·`Stop` 모두 걸린다. session id는 같아서 관문 상태가 이어진다 |
 
-- `evals/run.sh` 2단계에 라우터 frontmatter의 hooks를 `--settings`로 넘기면 대화형 세션과 같아진다. 무인 파이프라인도 같은 방식을 쓴다.
+- `evals/run.sh` 2단계에 라우터 frontmatter의 hooks를 `--settings`로 넘기면 대화형 세션과 같아진다. 무인 파이프라인도 같은 방식을 쓴다. #4에서 반영했다.
 - 같은 handler를 settings와 skill에 함께 등록하면 skill 쪽 복사본은 따로 돈다는 문서 기술이 있다. 1단계에는 넘기지 않는다.
+
+2026-11-06 개인 머신(macOS, 2.1.319)에서 eval 실행 기록으로 더 확인한 것.
+
+| 확인 | 결과 |
+|---|---|
+| `claude -p`에 `TodoWrite`·`AskUserQuestion`이 있나 | 없다. init의 도구 목록에 둘 다 없다(`Task`, `ListAgents`, `Skill`, `TaskStop`은 있음). 라우터의 "단계를 todo에 복사"는 답변 본문 목록으로 떨어지고, 시험 실행은 목록도 두지 않았다 |
+| 질문이 필요한 곳 | 라우터 실행 1의 위임 여부, 시작 3의 매핑(파일이 없을 때), brainstorm 3단계, feature 1단계의 큰 해석 차이, 관문. eval은 요청에 "서브에이전트 없이"를 넣어 앞의 둘을 피한다 |
+
+### 설계
+
+무인 실행은 답할 사람이 지금은 없고, 답이 나중에 `--resume`으로 오는 실행이다. 실행하는 쪽(eval의 `run.sh`, 나중의 파이프라인)과 dwarf 사이의 약속을 정한다.
+
+- 알아보는 법: 실행하는 쪽이 시스템 프롬프트(`--append-system-prompt`)로 무인 실행이라고 알린다. 알리지 않아도 Claude Code에 `AskUserQuestion`이 없으면 무인 실행으로 본다. 처음에는 도구가 없다는 것만으로 알아보게 했으나 측정에서 0/4였다(아래).
+- 묻지 않는다.
+  - 위임 여부는 묻지 않고 매핑대로 쓴다.
+  - 매핑 파일이 없으면 `references/agents.md`의 기본값을 쓰고 파일은 쓰지 않는다.
+  - 그 밖의 질문은 실행 중에 하나씩 묻지 않고, 멈출 때 보고에 모아서 쓴다.
+- 상태 파일 `<작업 디렉토리>/.docs/dwarf/state.md`가 todo를 대신한다. playbook을 연 뒤 만들고 단계마다 갱신한다. 이어 가는 실행은 이 파일에서 이어 갈 단계를 찾는다.
+  - 첫 줄들: `playbook`, `status`(`running`·`waiting`·`done`), `delegation`.
+  - 그 아래: playbook 단계 목록. 끝난 단계 `[x]`, 건너뛴 단계 `skip: 이유`.
+  - 턴을 끝내기 전에 `status`를 쓴다. 사용자 답이 필요하면 `waiting`(관문 보고, 질문), 끝났으면 `done`. 실행하는 쪽은 `waiting`이면 보고를 사용자에게 전하고 답을 `--resume`으로 넘긴다.
+- 커밋·push·PR 규칙은 바꾸지 않는다. 파이프라인은 요청에 원하는 범위를 적는다. 사용자 지시가 우선한다는 라우터 규칙을 그대로 쓴다.
+- hook으로 강제하지 않는다. hook은 실행이 무인인지 모른다. 측정에서 상태 파일을 빠뜨리는 실행이 나오면 그때 추가한다.
+- 둘 곳: 규칙은 `references/headless.md`(새 참조). 라우터 시작 2단계 맨 앞에서 가리킨다. `harness.md`의 감지·사용자 질문·todo·관문 hook 행을 함께 고쳤다.
+
+### 측정 계획
+
+- `evals/run.sh`가 단계마다 상태 파일을 결과에 남긴다(`phaseN.state.md`, `checks.txt`에 `INFO state-status`). 모든 단계에 무인 실행 시스템 프롬프트를 붙인다.
+- 대상: `bugfix-oversell-race`, `feature-partial-cancel`. haiku·sonnet 각 1회.
+- 기대: 1단계 끝 `waiting`, 2단계 끝 `done`. 단계 목록에 관문·리뷰 단계가 `[x]` 또는 `skip: 이유`로 남는다.
+
+### 결과 (2026-11-07)
+
+| 시도 | 알아보는 법 | `headless.md` 열람 | 상태 파일 (1단계 → 2단계) |
+|---|---|---|---|
+| h1 (4회) | `AskUserQuestion` 없음만. 라우터 2단계 끝에 한 문장 | 0/4 | 0/4 |
+| h2 (4회) | 시스템 프롬프트로 알림. 라우터 2단계 맨 앞 | 4/4 | 4/4 `waiting` → `done` |
+
+- h1은 `ls references/`에서 `headless.md`를 보고도 읽지 않았다. 2단계가 "Claude Code가 아니면"으로 시작해 건너뛴 것으로 보인다.
+- h2의 단계 목록은 관문·리뷰·정리까지 모두 남았다. haiku 1회가 멈출 때 아직 하지 않은 단계에 `skip`을 붙여서 `[ ]`와 skip을 구분하는 문장을 더했다.
+- feature haiku h2 1회에 결정적 채점 FAIL(`full-cancel-after-partial`)이 있다. 구현 결함이고 상태 파일과는 관계없다.
+- hook으로 강제하는 것은 h2에서 빠뜨린 실행이 없어 넣지 않았다.
 
 ## 외부 검증 환경 메모
 

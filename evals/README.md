@@ -60,6 +60,7 @@ evals/judge.sh evals/results/*-bugfix-retry-duplicate-*   # fixture마다 판정
 
 - 요청에 "서브에이전트 없이"를 넣어 실행 모델 하나의 품질만 잰다. 매핑된 reviewer 모델이 섞이지 않게 하려는 것이다.
 - 권한 모드는 `auto`. 도구 거부 수는 `meta.json`의 `denials`.
+- 모든 단계에 `--append-system-prompt`로 무인 실행임을 알린다(`skills/dwarf/references/headless.md`).
 - 필요한 것: Claude Code, Node.js 22 이상, `jq`, Docker(ops fixture). Linux·macOS. macOS에서는 `gtimeout`(coreutils)이 있을 때만 단계 시간 제한이 걸린다.
 - 실행이 끝나면 작업 공간, 컨테이너, `~/.claude/projects/`의 그 실행 기록을 지운다. `KEEP_WS=1`이면 작업 공간을 남긴다.
 

@@ -30,7 +30,7 @@ MAPPING = re.compile(r"/(?:\.config/dwarf|\.dwarf)/agents\.md$")  # references/a
 INSPECT_BEFORE_GATE = {"feature", "incident"}
 INSPECT_AFTER_CHANGE = {"bug-fix", "incident", "feature", "refactoring", "perf"}
 
-NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 Read로 열고 단계를 todo에 복사한 뒤 작업한다.
+NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 Read로 열고 단계를 todo(무인 실행은 상태 파일)에 옮긴 뒤 작업한다.
 그 전에는 Read·Grep과 dwarf 문서·설정을 읽는 Bash만 쓸 수 있다. 파일 수정과 관문 기록은 막힌다.
 - 맞는 playbook이 없으면 <작업 디렉토리>/.docs/dwarf/gate 를 Write 도구로 세 줄로 쓴다. status: none / playbook: 없음 / reason: 맞는 playbook이 없는 이유
 - Agent 매핑 파일(~/.config/dwarf/agents.md, .dwarf/agents.md)은 playbook 없이 쓸 수 있다. /dwarf agents는 {DWARF}/references/agents.md 를 읽고 이것만 한다."""

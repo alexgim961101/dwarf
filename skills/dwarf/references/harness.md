@@ -6,7 +6,7 @@ dwarf 문서는 Claude Code 용어로 쓴다. 다른 도구에서는 이 표로 
 
 | 세션에 보이는 것 | harness |
 |---|---|
-| `Agent`, `AskUserQuestion`, `Skill` 도구 | claude-code |
+| `Skill` 도구와 `Agent` 도구(`claude -p`에서는 `Task`라는 이름) | claude-code |
 | `~/.codex/` 설정, Codex CLI | codex |
 | `/skill:<name>` 호출, `~/.pi/agent/` | pi |
 | `/skill:<name>` 호출, `~/.omp/agent/` | omp |
@@ -18,13 +18,13 @@ dwarf 문서는 Claude Code 용어로 쓴다. 다른 도구에서는 이 표로 
 | 서브에이전트 | `Agent(subagent_type, prompt)`. 백그라운드가 기본 | 미확인 | 미확인 | agent 이름으로 호출. 미확인 |
 | 위임 model·effort | `Agent`의 `model`(별칭)·`effort` | 미확인 | 미확인 | 미확인 |
 | 읽기 전용 위임 | `Explore`. Bash는 남으므로 brief에 "수정하지 않는다"를 쓰고 사후 `git status` | 미확인 | 미확인 | 미확인 |
-| 사용자 질문 | `AskUserQuestion`. 비대화형(`-p`)이면 답변 본문에 | 답변 본문 | 답변 본문 | 답변 본문 |
-| todo | `TodoWrite`가 있으면 사용. 없으면 답변에 목록 | 답변에 목록 | 답변에 목록 | 답변에 목록 |
+| 사용자 질문 | `AskUserQuestion`. 없으면(`-p`) 무인 실행이라 `headless.md`대로 멈출 때 보고에 | 답변 본문 | 답변 본문 | 답변 본문 |
+| todo | `TodoWrite`가 있으면 사용. 없으면 답변에 목록. 무인 실행은 `headless.md`의 상태 파일 | 답변에 목록 | 답변에 목록 | 답변에 목록 |
 | 다른 dwarf 스킬 실행 | `<dwarf>/../<name>/SKILL.md`를 Read 하고 따른다. `Skill` 도구는 `disable-model-invocation` 스킬을 거부 | 같음 | 같음 | 같음 |
 | 사용자에게 안내할 호출 표기 | `/dwarf` | `/dwarf` | `/skill:dwarf` | `/skill:dwarf` |
 | 스킬 설치 경로 | `~/.claude/skills/` | `~/.codex/skills/` | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/skills/` | `~/.omp/agent/skills/` |
 | Agent 매핑 파일 | `~/.config/dwarf/agents.md` | 같음 | 같음 | 같음 |
-| 관문 hook | `SKILL.md` frontmatter `hooks`. `/dwarf` 호출 뒤 세션 동안. `-p --resume` 실행에는 다시 걸리지 않음 | 없음. 규칙만 | 없음. 규칙만 | 없음. 규칙만 |
+| 관문 hook | `SKILL.md` frontmatter `hooks`. `/dwarf` 호출 뒤 세션 동안. `-p --resume` 실행에는 다시 걸리지 않고, 같은 hooks를 `--settings`로 넘기면 걸림 | 없음. 규칙만 | 없음. 규칙만 | 없음. 규칙만 |
 | MCP 출처 탐지 (why) | 세션에 보이는 `mcp__<server>__*` 도구 이름 | 미확인 | 미확인 | 미확인 |
 
 ## Claude Code 메모
