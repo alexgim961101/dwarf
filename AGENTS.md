@@ -1,6 +1,6 @@
 # AGENTS.md
 
-이 저장소에서 작업하는 에이전트용 지침. 사용법·설치는 [README.md](README.md), 설계 근거는 [docs/design.md](docs/design.md).
+이 저장소에서 작업하는 에이전트용 지침. 사용법·설치는 [README.md](README.md).
 
 ## 개요
 
@@ -22,7 +22,6 @@
 | `skills/bench/` | leaf. 성능 측정 환경. `templates/`에 compose·k6·추적(compose 오버라이드·tempo) |
 | `skills/root-cause/`, `skills/blueprint/`, `skills/inspect/` | leaf. 결함 원인 확정 / 설계·하위 기능·작업 단위 / 변경·문서 점검·판정 |
 | `tests/routing.md` | 프롬프트 → 기대 playbook 케이스 |
-| `docs/design.md` | 설계 기준. 결정·미결·하지 않는 것 |
 | `install.sh` | `skills/*/`를 각 도구의 skills 디렉토리에 심볼릭 링크 |
 | `.docs/` | 로컬 작업 문서. gitignore |
 
@@ -48,7 +47,7 @@
 - playbook·leaf는 역할 이름(explorer·reviewer·worker)만 쓴다. Agent 이름·모델을 쓰지 않는다.
 - 모든 단계는 역할 매핑이 "없음"이어도 owner가 직접 수행할 수 있게 쓴다.
 - `p-<name>`은 판단 단계 옆에만 붙이고 절차 단계에는 붙이지 않는다.
-- playbook·leaf·원칙은 같은 필요가 두 번 보일 때만 추가한다. 후보와 미룬 이유는 `docs/design.md`에 있다.
+- playbook·leaf·원칙은 같은 필요가 두 번 보일 때만 추가한다.
 - 책임 분담. playbook은 순서·멈춤·사용자 보고·재라우팅, leaf는 절차와 출력. leaf에 멈춤·보고 항목·다음 playbook을 쓰지 않는다.
 - leaf 분리는 셋 다 맞을 때만.
   - 두 개 이상 playbook에서 같은 내용으로 반복된다. 유형별 변형이 대부분이면 playbook에 남긴다.
@@ -61,13 +60,12 @@
 
 | 변경 | 함께 갱신 |
 |---|---|
-| 스킬 추가·삭제·이름 변경 | `README.md` 구조, `docs/design.md` 디렉토리, `install.sh` 재실행 |
-| playbook 추가·삭제 | 라우터 분류 트리, `docs/design.md` playbook 표, `README.md` 목록, `tests/routing.md` 케이스 |
-| 원칙 추가·삭제 | `references/principles.md` 색인, `docs/design.md` 원칙 절 |
+| 스킬 추가·삭제·이름 변경 | `README.md` 구조, `install.sh` 재실행 |
+| playbook 추가·삭제 | 라우터 분류 트리, `README.md` 목록, `tests/routing.md` 케이스 |
+| 원칙 추가·삭제 | `references/principles.md` 색인 |
 | 분류 트리 변경 | `tests/routing.md` 재실행 |
 | 역할·brief 변경 | `references/roles.md`, 그 역할을 쓰는 playbook·leaf |
-| 설계 결정 변경 | `docs/design.md` 해당 절과 미결 표 |
-| playbook·leaf 책임 분담, leaf 분리 기준 | `AGENTS.md` 작성 규칙, `docs/design.md` leaf 스킬 절 |
+| playbook·leaf 책임 분담, leaf 분리 기준 | `AGENTS.md` 작성 규칙 |
 
 ## 테스트 방법
 
@@ -99,5 +97,4 @@ HOME="$T" ./install.sh --tool claude --uninstall   # 제거
 
 - 설치가 심볼릭 링크다. 저장소 수정이 `~/.claude/skills/` 등 실사용 환경에 바로 반영되고, 작업 중인 미완성 문서도 다른 세션의 `/dwarf`가 읽는다.
 - 새 스킬은 `install.sh`를 다시 실행해야 링크된다. 저장소를 옮기면 링크가 깨진다.
-- `docs/design.md`의 미결 항목은 임시 기본값을 따른다. 바꾸려면 먼저 사용자와 정한다.
 - 커밋은 사용자가 요청할 때만. 메시지는 `feat:`·`fix:`·`chore:` 접두사와 개조식 본문. 요청하지 않은 트레일러는 붙이지 않는다.

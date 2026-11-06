@@ -1,7 +1,7 @@
 # dwarf
 
 공통 개발 작업용 개인 스킬 묶음. 단일 진입점 `/dwarf`가 작업을 분류해 playbook을 고르고,
-이 저장소의 스킬을 순서대로 수행한다. 설계 기준 문서는 [docs/design.md](docs/design.md).
+이 저장소의 스킬을 순서대로 수행한다.
 
 ## 사용
 
@@ -27,7 +27,6 @@ skills/
   blueprint/          # 데이터 형태·대안 비교·하위 기능·작업 단위
   inspect/            # 변경·설계 문서를 의도와 대조해 발견 사항과 판정
 tests/routing.md      # 프롬프트 → 기대 playbook
-docs/design.md        # 설계 기준
 ```
 
 playbook 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore. 원인만·설계만 같은 요청은 해당 playbook을 구현 전에 멈춰 수행한다. 버그 수정은 해결안 후보를 별도 worktree에서 시험해 비교표와 추천을 보고하고, 사용자가 고른 해결안으로 고친다. 큰 기능이나 설계 요청은 하위 기능 목록을 담은 스펙을 `.docs/feature/`에 문서로 쓰고 독립 검토와 사용자 승인을 거친 뒤, 하위 기능 하나를 커밋 하나로 구현한다. 오래 걸리는 성능 측정은 설계를 `.docs/perf/`에 쓰고 독립 검토·파일럿·사용자 승인을 거쳐 측정한다.
