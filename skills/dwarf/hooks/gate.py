@@ -23,9 +23,10 @@ OPEN = {"approved", "none"}
 NO_DECISION = """dwarf 관문: 작업 트리를 바꾸기 전에 관문을 기록한다.
 <작업 디렉토리>/.docs/dwarf/gate 를 Write 도구로 세 줄로 쓴다.
 status: pending 또는 none
-playbook: bug-fix, feature, refactoring, perf, chore 중 하나
+playbook: bug-fix, incident, feature, refactoring, perf, chore 중 하나
 reason: 한 줄
 - bug-fix는 항상 pending. 해결안 후보는 작업 트리 밖 worktree에서 시험하고 관문 1 보고 뒤 멈춘다.
+- incident는 항상 pending. 관문 1 전에는 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload, 그런 스크립트)도 실행하지 않는다.
 - feature는 다음 중 하나라도 해당하면 pending, 아니면 none과 이유. 설계 요청 / 돈·권한·개인정보·저장 데이터 형식·공개 계약의 기존 동작 변경 / 둘 이상의 모듈이나 외부 서비스 호출 변경 / 결과가 크게 갈리는 해석 / 작업 단위 다섯 초과. 애매하면 해당으로 본다.
 - refactoring, perf, chore는 none과 이유.
 - 원인 조사용 임시 코드와 계측도 작업 트리 밖 worktree에서 한다.
@@ -139,8 +140,8 @@ def check_transition(fields, state):
         return "status는 pending, approved, none 중 하나다. answered는 hook만 쓴다."
     if status == "approved" and state.get("status") not in {"answered", "approved"}:
         return "approved는 사용자가 관문 보고에 답한 뒤(answered)에만 쓸 수 있다. 지금은 관문 보고를 하고 이번 턴을 끝낸다."
-    if status == "none" and playbook == "bug-fix":
-        return "bug-fix는 관문을 건너뛸 수 없다. status: pending으로 쓰고 관문 1 보고 뒤 멈춘다."
+    if status == "none" and playbook in {"bug-fix", "incident"}:
+        return f"{playbook}는 관문을 건너뛸 수 없다. status: pending으로 쓰고 관문 1 보고 뒤 멈춘다."
     if status == "none" and not fields.get("reason"):
         return "none에는 관문 대상이 아닌 이유(reason)가 필요하다."
     return None

@@ -18,16 +18,17 @@ reason: 해결안 후보 비교를 보고하고 승인을 기다린다
 
 | status | 누가 쓰나 | 작업 트리 수정 | 뜻 |
 |---|---|---|---|
-| pending | 모델 | 막힘 | 관문 보고를 하고 이번 턴을 끝낸다 |
+| pending | 모델 | 막힘 | 진단과 격리된 시험은 계속한다. 관문 보고를 하면 이번 턴을 끝낸다 |
 | answered | hook | 막힘 | 사용자가 관문 보고에 답했다. 다음 사용자 메시지에서 hook이 바꾼다 |
 | approved | 모델, answered 뒤에만 | 열림 | 사용자가 승인했다 |
-| none | 모델, 이유 필수 | 열림 | 관문 대상이 아니다. bug-fix에는 쓸 수 없다 |
+| none | 모델, 이유 필수 | 열림 | 관문 대상이 아니다. bug-fix·incident에는 쓸 수 없다 |
 
 ## playbook별
 
 | playbook | 처음 쓸 때 |
 |---|---|
 | bug-fix | 1단계 시작에 `pending`. 관문 1에서 사용자가 해결안을 고르면 `approved` |
+| incident | 1단계 시작에 `pending`. 관문 1에서 사용자가 조치 조합을 고르면 `approved` |
 | feature | 3단계 관문 판정 결과. 관문 대상이면 `pending`, 아니면 `none`과 이유. 관문 1에서 승인되면 `approved` |
 | refactoring, perf, chore | 작업 트리를 처음 바꾸기 전에 `none`과 이유 |
 | investigation, review, brainstorm | 쓰지 않는다. 작업 트리를 바꾸지 않는다 |
@@ -36,6 +37,7 @@ reason: 해결안 후보 비교를 보고하고 승인을 기다린다
 
 - 막는 것: 작업 트리(세션을 시작한 저장소의 worktree) 안 파일을 Edit·Write·NotebookEdit로 바꾸기.
 - 알리는 것: 관문이 열리기 전에 Bash로 작업 트리를 바꾸면 그 Bash 호출 뒤에 되돌리라고 알린다.
+- 막지 못하는 것: 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload). incident는 playbook 규칙으로 관문 1 전에 실행하지 않는다.
 - 막지 않는 것: `.docs/` 아래, 작업 트리 밖 경로, 별도 worktree. 해결안 시험과 원인 조사용 계측은 별도 worktree에서 한다.
 - 기록은 세션마다 따로 본다. 다른 세션이 남긴 `gate` 파일은 믿지 않는다.
 

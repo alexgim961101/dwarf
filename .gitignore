@@ -3,3 +3,6 @@
 
 # 평가 실행 결과
 evals/results/
+
+# Python 캐시
+__pycache__/

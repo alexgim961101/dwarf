@@ -17,18 +17,20 @@ evals/
     resume.md     (선택) 관문 1 뒤 이어 가는 말
     rubric.md     판정 기준과 기대 답. 실행하는 쪽에는 보이지 않음
     hidden/       check.sh(필수), grade.test.js, history.sh, pre.sh, post.sh
+                  repo와 hidden의 파일은 다른 fixture로 가는 심볼릭 링크여도 된다
   results/      실행별 출력. gitignore
 ```
 
-앞의 셋은 기본 동작 확인용으로 쉽다. 모델 간 차이는 뒤의 셋에서 본다.
+앞의 셋은 기본 동작 확인용으로 쉽다. 모델 간 차이는 뒤의 넷에서 본다.
 
 | fixture | playbook | 보는 것 |
 |---|---|---|
 | `bugfix-retry-duplicate` | bug-fix, 관문 1 뒤 이어 감 | 증상과 다른 곳의 원인, 같은 결함의 다른 곳, id 함정, 승인 전 무변경 |
 | `feature-status-filter` | feature, 관문 없음 | 필터 뒤 페이지·total, 기존 검증 재사용, 경계·실패 테스트 |
-| `ops-502-diagnosis` | bug-fix 멈춤(원인만) | 로그 근거, 미끼 커밋 배제, 설정·컨테이너 무변경 |
+| `ops-502-diagnosis` | incident 멈춤(원인만) | 로그 근거, 미끼 커밋 배제, 설정·컨테이너 무변경 |
 | `bugfix-oversell-race` | bug-fix, 관문 1 뒤 이어 감 | 확인과 차감 사이 `await`(동시성), 취소 경로의 이중 환불, 실패 시 되돌림, 과한 직렬화 |
-| `ops-stale-dns-502` | bug-fix 멈춤(원인만) | 재배포 뒤 nginx가 옛 api IP를 씀, 미끼 커밋 배제, nginx 상태 무변경 |
+| `ops-stale-dns-502` | incident 멈춤(원인만) | 재배포 뒤 nginx가 옛 api IP를 씀, 미끼 커밋 배제, nginx 상태 무변경 |
+| `ops-stale-dns-fix` | incident, 관문 1 뒤 이어 감 | 위와 같은 스택. 승인 전 무변경, 즉시 완화·구조적 해결·재발 방지 비교, 다시 배포해도 502가 안 남 |
 | `feature-partial-cancel` | feature, 관문 1 뒤 이어 감 | 스펙·관문, 모호점(할인·배송비) 드러내기, 전체 취소와의 불변식, 하위 기능별 커밋 |
 
 ## 실행
@@ -42,7 +44,7 @@ evals/judge.sh evals/results/*-bugfix-retry-duplicate-*   # fixture마다 판정
 ```
 
 - 실행마다 사용량이 든다. 단계당 상한은 `BUDGET_USD`(기본 5). 여러 번 돌리기 전에 비용을 확인한다.
-- 결과 디렉토리: `phaseN.report.md`(최종 보고), `phaseN.actions.txt`(도구 호출 순서), `checks.txt`(결정적 채점), `diff.patch`, `meta.json`(비용·턴·거부 수·유출).
+- 결과 디렉토리: `phaseN.report.md`(최종 보고), `phaseN.actions.txt`(도구 호출 순서), `phaseN.trace.txt`(도구 호출과 출력 앞뒤. 판정 자료), `checks.txt`(결정적 채점), `diff.patch`, `meta.json`(비용·턴·거부 수·유출). `meta.sh 결과디렉토리 fixture model rep`로 다시 만든다.
 - 판정 디렉토리: `summary.tsv`(실행·모델·점수), `judge.json`, `mapping.json`, `prompt.md`.
 - 판정 결과는 사람이 `phaseN.report.md`와 `diff.patch`를 직접 읽어 대조한다. 판정 모델과 다르면 기준이 모호하거나 판정이 치우친 것이다.
 

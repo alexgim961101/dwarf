@@ -21,7 +21,7 @@ root=$(mktemp -d "${TMPDIR:-/tmp}/ws.XXXXXX")
 ws="$root/$(cat "$F/project")"
 
 # 작업 공간: fixture 저장소 복사본. 채점 자료(hidden, rubric)는 넣지 않는다.
-cp -R "$F/repo" "$ws"
+cp -RH "$F/repo" "$ws"
 ws=$(cd "$ws" && pwd -P)
 git -C "$ws" init -q
 if [ -x "$F/hidden/history.sh" ]; then

@@ -33,8 +33,8 @@ while IFS= read -r d; do runs+=("$d"); done < <(printf '%s\n' "$@" | awk 'BEGIN{
       n=$(basename "$r" .report.md)
       echo "## $n 최종 보고"
       cat "$r"
-      echo "## $n 실행 기록 (도구 호출, 앞 150개)"
-      head -150 "$d/$n.actions.txt" 2>/dev/null || true
+      echo "## $n 실행 기록 (도구 호출과 출력 앞뒤, 앞 800줄)"
+      head -800 "$d/$n.trace.txt" 2>/dev/null || true
     done
     echo "## 결정적 채점"
     cat "$d/checks.txt"

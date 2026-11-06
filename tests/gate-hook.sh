@@ -35,6 +35,7 @@ expect "작업 트리 안 다른 worktree는 허용" allow "$(decision PreToolUs
 expect "answered는 모델이 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: answered\nplaybook: bug-fix\nreason: x')"
 expect "pending 없이 approved 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: approved\nplaybook: bug-fix\nreason: x')"
 expect "bug-fix는 none 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: none\nplaybook: bug-fix\nreason: x')"
+expect "incident는 none 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: none\nplaybook: incident\nreason: x')"
 expect "none은 이유 필요" deny "$(decision PreToolUse Write "$gate" $'status: none\nplaybook: chore\nreason:')"
 expect "pending 기록 허용" allow "$(decision PreToolUse Write "$gate" $'status: pending\nplaybook: bug-fix\nreason: 후보 비교 보고')"
 write_gate $'status: pending\nplaybook: bug-fix\nreason: 후보 비교 보고\n'
