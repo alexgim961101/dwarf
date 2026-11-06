@@ -6,7 +6,7 @@
 
 - 공통 개발 작업용 개인 스킬 묶음. pstack `poteto-mode`의 라우터·playbook 구조에서 영감을 받았다.
 - `/dwarf <목표>` 하나로 시작한다. 라우터가 작업을 분류해 playbook을 고르고, playbook 단계와 leaf 스킬을 순서대로 수행한다.
-- 산출물은 Markdown 스킬 문서다. 실행 코드는 `install.sh` 하나.
+- 산출물은 Markdown 스킬 문서다. 실행 코드는 `install.sh`, 관문 hook(`skills/dwarf/hooks/gate.py`), `evals/`와 `tests/`의 검사 스크립트.
 - 문서는 Claude Code 용어로 쓴다. Codex·Pi·OMP와의 차이는 `skills/dwarf/references/harness.md`에만 둔다.
 
 ## 프로젝트 구조
@@ -15,13 +15,16 @@
 |---|---|
 | `skills/dwarf/SKILL.md` | 라우터. 인자 해석, 분류 트리, 재라우팅, 실행 규칙 |
 | `skills/dwarf/playbooks/` | 작업 유형별 단계 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore |
-| `skills/dwarf/references/` | 공유 참조. `roles`(역할·brief), `agents`(Agent 선택·기록), `harness`(도구별 매핑), `principles`(원칙 색인) |
+| `skills/dwarf/references/` | 공유 참조. `roles`(역할·brief), `agents`(Agent 선택·기록), `harness`(도구별 매핑), `principles`(원칙 색인), `gate`(관문 기록) |
+| `skills/dwarf/hooks/gate.py` | 관문 hook. `/dwarf`를 부르면 등록되어 관문 기록 없는 작업 트리 수정을 막는다 |
 | `skills/p-<name>/` | 원칙 leaf 14개. 적용할 때만 읽음 |
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
 | `skills/blast-radius/` | leaf. 변경이 diff 밖의 어디를 깨뜨리나 |
 | `skills/bench/` | leaf. 성능 측정 환경. `templates/`에 compose·k6·추적(compose 오버라이드·tempo) |
 | `skills/root-cause/`, `skills/blueprint/`, `skills/inspect/` | leaf. 결함 원인 확정 / 설계·하위 기능·작업 단위 / 변경·문서 점검·판정 |
 | `tests/routing.md` | 프롬프트 → 기대 playbook 케이스 |
+| `tests/gate-hook.sh` | 관문 hook 판정 검사 |
+| `evals/` | 모델 간 평가. 결함·요구를 심은 fixture, 숨김 채점, `run.sh`·`judge.sh` |
 | `install.sh` | `skills/*/`를 각 도구의 skills 디렉토리에 심볼릭 링크 |
 | `.docs/` | 로컬 작업 문서. gitignore |
 
@@ -65,6 +68,8 @@
 | 원칙 추가·삭제 | `references/principles.md` 색인 |
 | 분류 트리 변경 | `tests/routing.md` 재실행 |
 | 역할·brief 변경 | `references/roles.md`, 그 역할을 쓰는 playbook·leaf |
+| 관문 규칙 변경 | `references/gate.md`, `hooks/gate.py`의 안내 문구, `tests/gate-hook.sh`, 관문을 쓰는 playbook(bug-fix·feature) |
+| playbook·leaf 단계·보고 형식 변경 | 그 playbook을 쓰는 `evals/` fixture의 `rubric.md`. 비용을 확인한 뒤 재실행 |
 | playbook·leaf 책임 분담, leaf 분리 기준 | `AGENTS.md` 작성 규칙 |
 
 ## 테스트 방법
@@ -74,7 +79,9 @@
 | 대상 | 방법 |
 |---|---|
 | 라우팅 | `tests/routing.md`의 실행 방법대로. 서브에이전트에 "분류" 절과 프롬프트만 주고 playbook 이름을 받아 기대값과 비교 |
+| playbook·leaf 동작 | `evals/README.md`대로 모델별 실행과 블라인드 판정. 사용량이 들어 사용자 확인 후 |
 | frontmatter·줄 상한 | 아래 정적 확인 |
+| 관문 hook | `tests/gate-hook.sh`. 실제 세션 동작은 `evals/`의 관문 fixture |
 | `install.sh` | `bash -n install.sh`, 격리 HOME에서 설치·재실행·제거 |
 | 스킬 노출 | 설치 후 새 세션의 `/` 메뉴에 보이는지, description이 깨지지 않는지 |
 

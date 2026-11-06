@@ -24,6 +24,7 @@ dwarf 문서는 Claude Code 용어로 쓴다. 다른 도구에서는 이 표로 
 | 사용자에게 안내할 호출 표기 | `/dwarf` | `/dwarf` | `/skill:dwarf` | `/skill:dwarf` |
 | 스킬 설치 경로 | `~/.claude/skills/` | `~/.codex/skills/` | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/skills/` | `~/.omp/agent/skills/` |
 | Agent 매핑 파일 | `~/.config/dwarf/agents.md` | 같음 | 같음 | 같음 |
+| 관문 hook | `SKILL.md` frontmatter `hooks`. `/dwarf` 호출 뒤 세션 동안. `-p --resume` 실행에는 다시 걸리지 않음 | 없음. 규칙만 | 없음. 규칙만 | 없음. 규칙만 |
 | MCP 출처 탐지 (why) | 세션에 보이는 `mcp__<server>__*` 도구 이름 | 미확인 | 미확인 | 미확인 |
 
 ## Claude Code 메모

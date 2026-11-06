@@ -12,13 +12,15 @@
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent와 model·effort를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |
 
+변경 playbook은 작업 트리를 바꾸기 전에 관문을 `.docs/dwarf/gate`에 기록한다. Claude Code에서는 `/dwarf`가 등록하는 hook이 기록 없는 수정과 승인 전 수정을 막는다(`python3`, `git` 필요). 규칙은 `skills/dwarf/references/gate.md`.
+
 최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 Agent와 model·effort(선택)를 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
 
 ## 구조
 
 ```
 skills/
-  dwarf/              # 라우터. SKILL.md, playbooks/, references/
+  dwarf/              # 라우터. SKILL.md, playbooks/, references/, hooks/gate.py
   p-<name>/           # 원칙 14개. 적용할 때만 읽음
   how/  why/          # 동작·구조 파악, 동기·이력 조사
   blast-radius/       # 변경이 diff 밖의 어디를 깨뜨리나
@@ -27,6 +29,8 @@ skills/
   blueprint/          # 데이터 형태·대안 비교·하위 기능·작업 단위
   inspect/            # 변경·설계 문서를 의도와 대조해 발견 사항과 판정
 tests/routing.md      # 프롬프트 → 기대 playbook
+tests/gate-hook.sh    # 관문 hook 판정 검사
+evals/                # 모델 간 평가. fixture, run.sh, judge.sh
 ```
 
 playbook 8개. brainstorm, investigation, review, bug-fix, feature, refactoring, perf, chore. 원인만·설계만 같은 요청은 해당 playbook을 구현 전에 멈춰 수행한다. 버그 수정은 해결안 후보를 별도 worktree에서 시험해 비교표와 추천을 보고하고, 사용자가 고른 해결안으로 고친다. 큰 기능이나 설계 요청은 하위 기능 목록을 담은 스펙을 `.docs/feature/`에 문서로 쓰고 독립 검토와 사용자 승인을 거친 뒤, 하위 기능 하나를 커밋 하나로 구현한다. 오래 걸리는 성능 측정은 설계를 `.docs/perf/`에 쓰고 독립 검토·파일럿·사용자 승인을 거쳐 측정한다.
