@@ -18,7 +18,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | 3 | `incident` playbook (실행 중인 시스템의 장애) | 완료. 남은 문제 아래 |
 | 4 | 단계 생략 방지 (playbook 미열람, inspect 생략) | 완료. 측정 결과와 남은 문제 아래 |
 | 5 | headless 실행 상태 (todo 대신 상태 파일, `--resume` hook) | 완료. 측정 결과 아래 |
-| 6 | 파이프라인 (Jira intake, Slack 질의, PR leaf) | 미착수 |
+| 6 | 파이프라인 (Jira intake, Discord 질의, Bitbucket PR) | 담당 Agent 구현·통합 확인까지. 실제 서비스 연결 전 |
 
 ## 3. incident
 
@@ -189,6 +189,15 @@ Claude Code 2.1.319, 임시 프로젝트의 skill로 실험했다.
 - h2의 단계 목록은 관문·리뷰·정리까지 모두 남았다. haiku 1회가 멈출 때 아직 하지 않은 단계에 `skip`을 붙여서 `[ ]`와 skip을 구분하는 문장을 더했다.
 - feature haiku h2 1회에 결정적 채점 FAIL(`full-cancel-after-partial`)이 있다. 구현 결함이고 상태 파일과는 관계없다.
 - hook으로 강제하는 것은 h2에서 빠뜨린 실행이 없어 넣지 않았다.
+
+## 6. 파이프라인
+
+- 담당 Agent는 별도 저장소 [dwarf-runner](https://github.com/alexgim961101/dwarf-runner)(private)에 뒀다. dwarf는 스킬 묶음으로 남긴다.
+  - 2026-11-07 결정: 저장소를 나눈 채 간다. pstack은 단일 Cursor 플러그인이고 이슈 감시·메신저는 플랫폼이 맡는 것으로 보인다(추정). runner가 그 자리를 대신한다. PR 열기는 pstack처럼 dwarf leaf로 옮길 수 있다. 대화형 `/dwarf`에서도 필요해지면 옮긴다.
+- 첫 연결: Jira Cloud(이슈) → Discord(질문·보고) → Bitbucket Cloud(초안 PR). 실행은 개인 머신.
+- dwarf와의 약속은 #4·#5 그대로: `/dwarf` 시작, `--append-system-prompt`로 무인 실행 알림, `state.md`의 `waiting`·`done`, 이어 갈 때 `--resume`과 라우터 hooks(`--settings`). PR 단계는 dwarf leaf가 아니라 runner가 한다(dwarf에게는 커밋까지만 요청).
+- 확인한 것(2026-11-07): unittest 15개. 실제 claude·dwarf(haiku)로 `bugfix-oversell-race` 저장소를 처리한 통합 확인에서 `waiting` → 답 → `done`, 커밋 1개, push, PR 요청까지 이어졌다(Jira·Discord·Bitbucket은 가짜).
+- 남은 것: 토큰을 넣고 실제 Jira·Discord·Bitbucket으로 `python3 -m dwarf_runner once` 확인. 상시 실행 방법(launchd 등). GitHub Issues·Slack은 그 뒤.
 
 ## 외부 검증 환경 메모
 
