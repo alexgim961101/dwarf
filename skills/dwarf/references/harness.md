@@ -21,7 +21,7 @@ dwarf 문서는 Claude Code 용어로 쓴다. 다른 도구에서는 이 표로 
 | 사용자 질문 | `AskUserQuestion`. 없으면(`-p`) 무인 실행이라 `headless.md`대로 멈출 때 보고에 | 답변 본문 | 답변 본문 | 답변 본문 |
 | 진행 상태 | 상태 파일 `<작업 디렉토리>/.docs/dwarf/state.md`(`state.md`). todo 도구는 쓰지 않는다 | 같음 | 같음 | 같음 |
 | 다른 dwarf 스킬 실행 | `<dwarf>/../<name>/SKILL.md`를 Read 하고 따른다. `Skill` 도구는 `disable-model-invocation` 스킬을 거부 | 같음 | 같음 | 같음 |
-| 사용자에게 안내할 호출 표기 | `/dwarf` | `/dwarf` | `/skill:dwarf` | `/skill:dwarf` |
+| 사용자에게 안내할 호출 표기 | `/dwarf` | `$dwarf` 멘션(`codex exec`에서 확인) | `/skill:dwarf` | `/skill:dwarf`(`omp -p`에서 확인. 모델이 `read skill://dwarf`로 읽는다) |
 | 스킬 설치 경로 | `~/.claude/skills/` | `~/.codex/skills/` | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/skills/` | `~/.omp/agent/skills/` |
 | Agent 매핑 파일 | `~/.config/dwarf/agents.md` | 같음 | 같음 | 같음 |
 | 관문 hook | `SKILL.md` frontmatter `hooks`. `/dwarf` 호출 뒤 세션 동안. `-p --resume` 실행에는 다시 걸리지 않고, 같은 hooks를 `--settings`로 넘기면 걸림 | 없음. 규칙만 | 없음. 규칙만 | 없음. 규칙만 |

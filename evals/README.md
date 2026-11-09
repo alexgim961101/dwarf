@@ -8,6 +8,12 @@
 evals/
   run.sh        fixture 하나를 모델 하나로 실행. 관문이 있으면 --resume으로 이어 가고, 이때 라우터 hook을 --settings로 건다.
                 NO_SKILL=1이면 dwarf 없이 같은 요청을 실행한다(스킬 없음 기준선)
+  meta.sh       실행 기록으로 meta.json과 phaseN.trace.txt를 만든다. run.sh가 부른다
+  run-codex.sh  run.sh의 Codex CLI판. 격리된 CODEX_HOME에 skills/*를 링크하고 $dwarf 멘션으로 부른다. 산출물 모양이 같아 judge.sh에 섞을 수 있다
+  meta-codex.sh run-codex.sh 기록의 meta.json·trace. 비용 대신 토큰 수
+  run-omp.sh    run.sh의 omp판. --skills로 이 저장소의 스킬만 보이게 하고 /skill:dwarf로 부른다. 세션은 결과 디렉토리 아래, 2단계는 -c
+  meta-omp.sh   run-omp.sh 기록의 meta.json·trace. 비용은 omp usage의 추정치 합
+  workspace.sh  run.sh·run-codex.sh·run-omp.sh가 쓰는 작업 공간 준비(repo 복사, hidden/history.sh)
   judge.sh      같은 fixture의 실행들을 이름을 가린 채 판정 모델 하나가 채점
   judge.md      판정 지시
   lib.sh        check.sh가 쓰는 결정적 채점 함수
@@ -45,9 +51,14 @@ for f in bugfix-oversell-race ops-stale-dns-502 feature-partial-cancel; do
 done
 NO_SKILL=1 evals/run.sh bugfix-retry-duplicate haiku     # 스킬 없음 기준선. 결과 디렉토리 이름 끝에 -noskill
 evals/judge.sh evals/results/*-bugfix-retry-duplicate-*   # fixture마다 판정. dwarf 실행과 기준선을 섞어도 된다
+CODEX_SANDBOX=danger-full-access evals/run-codex.sh bugfix-negative-stock gpt-6-luna   # Codex CLI. bwrap 샌드박스가 안 되는 머신은 danger-full-access
+NO_SKILL=1 CODEX_SANDBOX=danger-full-access evals/run-codex.sh bugfix-negative-stock gpt-6-luna
+evals/run-omp.sh bugfix-negative-stock gpt-6-luna          # omp. provider는 OMP_PROVIDER(기본 openai-codex), thinking은 OMP_THINKING(기본 medium)
+NO_SKILL=1 evals/run-omp.sh bugfix-negative-stock gpt-6-luna
 ```
 
 - 실행마다 사용량이 든다. 단계당 상한은 `BUDGET_USD`(기본 5). 여러 번 돌리기 전에 비용을 확인한다.
+- Codex·omp 실행(`run-codex.sh`, `run-omp.sh`)은 `meta.json`에 `harness`와 `effort`(codex effort, omp thinking)를 적는다. Codex는 비용 대신 토큰 수, omp는 usage의 비용 추정치 합. 둘 다 관문 hook이 없어 승인 전 무변경은 규칙만으로 지켜진 결과다. Codex의 임시 `CODEX_HOME`은 결과 디렉토리 아래 `codex-home/`에 생겼다가 끝나면 지워지고, omp 세션은 `sessions/`에 남는다.
 - 결과 디렉토리: `phaseN.report.md`(최종 보고), `phaseN.actions.txt`(도구 호출 순서), `phaseN.trace.txt`(도구 호출과 출력 앞뒤. 판정 자료), `phaseN.state.md`(단계가 끝날 때의 상태 파일), `checks.txt`(결정적 채점), `diff.patch`, `meta.json`(비용·턴·거부 수·유출·skill). `meta.sh 결과디렉토리 fixture model rep [skill]`로 다시 만든다.
 - 판정 디렉토리: `summary.tsv`(실행·모델·스킬·점수), `judge.json`, `mapping.json`, `prompt.md`.
 - 판정 결과는 사람이 `phaseN.report.md`와 `diff.patch`를 직접 읽어 대조한다. 판정 모델과 다르면 기준이 모호하거나 판정이 치우친 것이다.
@@ -76,7 +87,7 @@ dwarf가 비용(토큰·턴)만큼 결과를 좋게 하는지는 dwarf 없이 �
 - 요청에 "서브에이전트 없이"를 넣어 실행 모델 하나의 품질만 잰다. 매핑된 reviewer 모델이 섞이지 않게 하려는 것이다.
 - 권한 모드는 `auto`. 도구 거부 수는 `meta.json`의 `denials`.
 - 모든 단계에 `--append-system-prompt`로 무인 실행임을 알린다(`skills/dwarf/references/headless.md`). 상태 파일은 `references/state.md`.
-- 필요한 것: Claude Code, Node.js 22 이상, `jq`, Docker(ops fixture). Linux·macOS. macOS에서는 `gtimeout`(coreutils)이 있을 때만 단계 시간 제한이 걸린다.
+- 필요한 것: Claude Code, Node.js 22 이상, `jq`, Docker(ops fixture). Codex 실행은 Codex CLI와 로그인(`~/.codex/auth.json`), omp 실행은 omp와 provider 로그인, `./install.sh --tool omp`. Linux·macOS. macOS에서는 `gtimeout`(coreutils)이 있을 때만 단계 시간 제한이 걸린다.
 - 실행이 끝나면 작업 공간, 컨테이너, `~/.claude/projects/`의 그 실행 기록을 지운다. `KEEP_WS=1`이면 작업 공간을 남긴다.
 
 ## fixture 추가

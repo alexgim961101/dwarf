@@ -35,18 +35,9 @@ mkdir -p "$out/state"
 root=$(mktemp -d "${TMPDIR:-/tmp}/ws.XXXXXX")
 ws="$root/$(cat "$F/project")"
 
-# 작업 공간: fixture 저장소 복사본. 채점 자료(hidden, rubric)는 넣지 않는다.
-cp -RH "$F/repo" "$ws"
-ws=$(cd "$ws" && pwd -P)
-git -C "$ws" init -q
-if [ -x "$F/hidden/history.sh" ]; then
-  "$F/hidden/history.sh" "$ws"
-else
-  git -C "$ws" add -A
-  git -C "$ws" -c user.name=dev -c user.email=dev@example.com commit -qm "initial"
-fi
-BASE=$(git -C "$ws" rev-parse HEAD)
-export BASE
+# 작업 공간: fixture 저장소 복사본(workspace.sh). ws와 BASE가 설정된다.
+. "$EVALS_DIR/workspace.sh"
+make_workspace "$F" "$ws"
 
 cleanup() {
   if [ -x "$F/hidden/post.sh" ]; then "$F/hidden/post.sh" "$ws" || true; fi
