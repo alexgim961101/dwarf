@@ -6,7 +6,8 @@
 
 ```
 evals/
-  run.sh        fixture 하나를 모델 하나로 실행. 관문이 있으면 --resume으로 이어 가고, 이때 라우터 hook을 --settings로 건다
+  run.sh        fixture 하나를 모델 하나로 실행. 관문이 있으면 --resume으로 이어 가고, 이때 라우터 hook을 --settings로 건다.
+                NO_SKILL=1이면 dwarf 없이 같은 요청을 실행한다(스킬 없음 기준선)
   judge.sh      같은 fixture의 실행들을 이름을 가린 채 판정 모델 하나가 채점
   judge.md      판정 지시
   lib.sh        check.sh가 쓰는 결정적 채점 함수
@@ -40,13 +41,25 @@ evals/run.sh bugfix-retry-duplicate haiku          # 한 번
 for f in bugfix-oversell-race ops-stale-dns-502 feature-partial-cancel; do
   for m in haiku sonnet opus; do for r in 1 2; do evals/run.sh "$f" "$m" "$r"; done; done
 done
-evals/judge.sh evals/results/*-bugfix-retry-duplicate-*   # fixture마다 판정
+NO_SKILL=1 evals/run.sh bugfix-retry-duplicate haiku     # 스킬 없음 기준선. 결과 디렉토리 이름 끝에 -noskill
+evals/judge.sh evals/results/*-bugfix-retry-duplicate-*   # fixture마다 판정. dwarf 실행과 기준선을 섞어도 된다
 ```
 
 - 실행마다 사용량이 든다. 단계당 상한은 `BUDGET_USD`(기본 5). 여러 번 돌리기 전에 비용을 확인한다.
-- 결과 디렉토리: `phaseN.report.md`(최종 보고), `phaseN.actions.txt`(도구 호출 순서), `phaseN.trace.txt`(도구 호출과 출력 앞뒤. 판정 자료), `checks.txt`(결정적 채점), `diff.patch`, `meta.json`(비용·턴·거부 수·유출). `meta.sh 결과디렉토리 fixture model rep`로 다시 만든다.
-- 판정 디렉토리: `summary.tsv`(실행·모델·점수), `judge.json`, `mapping.json`, `prompt.md`.
+- 결과 디렉토리: `phaseN.report.md`(최종 보고), `phaseN.actions.txt`(도구 호출 순서), `phaseN.trace.txt`(도구 호출과 출력 앞뒤. 판정 자료), `phaseN.state.md`(단계가 끝날 때의 상태 파일), `checks.txt`(결정적 채점), `diff.patch`, `meta.json`(비용·턴·거부 수·유출·skill). `meta.sh 결과디렉토리 fixture model rep [skill]`로 다시 만든다.
+- 판정 디렉토리: `summary.tsv`(실행·모델·스킬·점수), `judge.json`, `mapping.json`, `prompt.md`.
 - 판정 결과는 사람이 `phaseN.report.md`와 `diff.patch`를 직접 읽어 대조한다. 판정 모델과 다르면 기준이 모호하거나 판정이 치우친 것이다.
+
+## 스킬 없음 기준선
+
+dwarf가 비용(토큰·턴)만큼 결과를 좋게 하는지는 dwarf 없이 돌린 같은 요청과 비교해야 보인다. `NO_SKILL=1`이 그 기준선이다.
+
+- 요청은 `task.md`에서 앞의 `/dwarf `만 뗀 것. `resume.md`가 있으면 2단계도 같은 말로 이어 간다. 시스템 프롬프트(무인 실행), 모델, 권한 모드, 예산은 같다.
+- `skills/*/` 아래 모든 스킬을 `skillOverrides`로 끈다. 스킬을 부르지 않으므로 관문 hook은 걸리지 않고 상태 파일도 없다.
+- `meta.json`의 `skill`이 `none`이고 `docs_read`가 비어 있어야 기준선이다. dwarf 문서를 읽었으면 `run.sh`가 경고를 내고, 그 실행은 버린다.
+- 결정적 채점은 그대로 돈다. 관문 관련 항목(`gate-no-edit`, `gate-record`)은 기준선에서 FAIL·INFO로 나오는 것이 정상이고, 그 자체가 비교 자료다.
+- 판정은 dwarf 실행과 기준선을 같은 `judge.sh`에 섞어 넣는다. 판정 모델에게는 `/dwarf`를 뗀 요청을 보이고, 실행 기록에 보이는 스킬 사용으로 가점·감점하지 않게 지시한다(`judge.md`). 대응은 `summary.tsv`의 스킬 열로 본다.
+- 보는 것: 판정 점수와 시니어 수준 비율, 숨김 테스트 PASS 수, 비용·턴 수. 점수 차이가 비용 차이를 정당화하지 못하면 스킬을 줄일 곳을 찾는다.
 
 ## 블라인드 규칙
 
@@ -60,7 +73,7 @@ evals/judge.sh evals/results/*-bugfix-retry-duplicate-*   # fixture마다 판정
 
 - 요청에 "서브에이전트 없이"를 넣어 실행 모델 하나의 품질만 잰다. 매핑된 reviewer 모델이 섞이지 않게 하려는 것이다.
 - 권한 모드는 `auto`. 도구 거부 수는 `meta.json`의 `denials`.
-- 모든 단계에 `--append-system-prompt`로 무인 실행임을 알린다(`skills/dwarf/references/headless.md`).
+- 모든 단계에 `--append-system-prompt`로 무인 실행임을 알린다(`skills/dwarf/references/headless.md`). 상태 파일은 `references/state.md`.
 - 필요한 것: Claude Code, Node.js 22 이상, `jq`, Docker(ops fixture). Linux·macOS. macOS에서는 `gtimeout`(coreutils)이 있을 때만 단계 시간 제한이 걸린다.
 - 실행이 끝나면 작업 공간, 컨테이너, `~/.claude/projects/`의 그 실행 기록을 지운다. `KEEP_WS=1`이면 작업 공간을 남긴다.
 

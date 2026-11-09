@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # fixture 하나를 모델 하나로 실행하고 결과를 evals/results/에 남긴다.
 # 사용: evals/run.sh <fixture> <model> [반복 번호]
-# 환경 변수: BUDGET_USD(단계당 비용 상한, 기본 5), PHASE_TIMEOUT(단계당 초, 기본 2700), KEEP_WS=1(작업 공간 남김)
+# 환경 변수: BUDGET_USD(단계당 비용 상한, 기본 5), PHASE_TIMEOUT(단계당 초, 기본 2700), KEEP_WS=1(작업 공간 남김),
+#           NO_SKILL=1(스킬 없음 기준선. 요청 앞의 /dwarf를 떼고 이 저장소의 스킬을 모두 끈 채 같은 요청을 실행)
 set -euo pipefail
 
 EVALS_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -19,8 +20,17 @@ hooks=$(sed -n '/^hooks:$/,/^---$/s/^  \(".*\)$/\1/p' "$EVALS_DIR/../skills/dwar
   | paste -sd, - | sed 's/.*/{"hooks": {&}}/' | jq -c .)
 # 모든 단계에 무인 실행임을 알린다(skills/dwarf/references/headless.md).
 headless_prompt="이 세션은 무인 실행이다. 사용자는 지금 답할 수 없고, 답은 다음 실행의 요청으로 온다."
+# 스킬 없음 기준선: skills/*/를 전부 끈다(skillOverrides). 스킬을 부르지 않으므로 관문 hook도 걸리지 않는다.
+skill=dwarf
+suffix=
+if [ "${NO_SKILL:-}" = 1 ]; then
+  skill=none
+  suffix=-noskill
+  overrides=$(for d in "$EVALS_DIR"/../skills/*/; do basename "$d"; done \
+    | jq -R . | jq -sc 'map({(.): "off"}) | add | {skillOverrides: .}')
+fi
 
-out="$EVALS_DIR/results/$(date +%Y%m%d-%H%M%S)-$fixture-$model-$rep"
+out="$EVALS_DIR/results/$(date +%Y%m%d-%H%M%S)-$fixture-$model-$rep$suffix"
 mkdir -p "$out/state"
 root=$(mktemp -d "${TMPDIR:-/tmp}/ws.XXXXXX")
 ws="$root/$(cat "$F/project")"
@@ -55,12 +65,16 @@ if [ -x "$F/hidden/pre.sh" ]; then "$F/hidden/pre.sh" "$ws" "$out/state"; fi
 
 # phase 번호 프롬프트파일 [세션ID]
 phase() {
-  local n=$1 prompt=$2 sid=${3:-} cmd=()
+  local n=$1 prompt=$2 sid=${3:-} cmd=() text
+  text=$(cat "$prompt")
+  [ "$skill" = none ] && text=${text#/dwarf }
   [ -n "$timeout_cmd" ] && cmd=("$timeout_cmd" "$limit")
   cmd+=(claude -p --model "$model" --permission-mode auto --max-budget-usd "$budget"
     --output-format stream-json --verbose --append-system-prompt "$headless_prompt")
-  [ -n "$sid" ] && cmd+=(--resume "$sid" --settings "$hooks")
-  (cd "$ws" && "${cmd[@]}" "$(cat "$prompt")" </dev/null) >"$out/phase$n.jsonl" 2>"$out/phase$n.stderr" || true
+  if [ "$skill" = none ]; then cmd+=(--settings "$overrides")
+  elif [ -n "$sid" ]; then cmd+=(--settings "$hooks"); fi
+  [ -n "$sid" ] && cmd+=(--resume "$sid")
+  (cd "$ws" && "${cmd[@]}" "$text" </dev/null) >"$out/phase$n.jsonl" 2>"$out/phase$n.stderr" || true
   jq -c 'select(.type=="result")' "$out/phase$n.jsonl" | tail -1 >"$out/phase$n.result.json"
   jq -r '.result // ""' "$out/phase$n.result.json" >"$out/phase$n.report.md"
   # 실행 기록: 도구 호출 순서. 판정 모델이 보고서 주장을 확인하는 데 쓴다.
@@ -69,7 +83,7 @@ phase() {
     | tostring | gsub("\n"; " ") | .[0:200])' "$out/phase$n.jsonl" >"$out/phase$n.actions.txt" || true
   echo "## phase$n" >>"$out/checks.txt"
   "$F/hidden/check.sh" "$ws" "phase$n" "$out/state" >>"$out/checks.txt" 2>&1 || true
-  # 무인 실행의 상태 파일(references/headless.md). 단계가 끝날 때의 상태를 남긴다.
+  # 상태 파일(references/state.md). 단계가 끝날 때의 상태를 남긴다. 스킬 없음 기준선에는 없다.
   cp "$ws/.docs/dwarf/state.md" "$out/phase$n.state.md" 2>/dev/null || true
   echo "INFO state-status $(sed -n 's/^status: *//p' "$out/phase$n.state.md" 2>/dev/null | head -1)" >>"$out/checks.txt"
 }
@@ -83,8 +97,12 @@ git -C "$ws" add -N . 2>/dev/null || true
 git -C "$ws" diff "$BASE" >"$out/diff.patch" || true
 git -C "$ws" log --oneline "$BASE"..HEAD >"$out/commits.txt" || true
 
-"$EVALS_DIR/meta.sh" "$out" "$fixture" "$model" "$rep"
+"$EVALS_DIR/meta.sh" "$out" "$fixture" "$model" "$rep" "$skill"
+# 기준선이 dwarf 문서를 읽었으면 스킬이 꺼지지 않은 것이다. 그 실행은 기준선으로 쓰지 않는다.
+if [ "$skill" = none ] && [ "$(jq -r '.docs_read | length' "$out/meta.json")" != 0 ]; then
+  echo "경고: 스킬 없음 기준선이 dwarf 문서를 읽었다: $(jq -r '.docs_read | join(" ")' "$out/meta.json")" >&2
+fi
 
 echo "$out"
 cat "$out/checks.txt"
-jq -c '{total_cost_usd, leak_mentions, docs_read, tool_counts, phases: [.phases[] | {subtype, num_turns, cost_usd, denials}]}' "$out/meta.json"
+jq -c '{skill, total_cost_usd, leak_mentions, docs_read, tool_counts, phases: [.phases[] | {subtype, num_turns, cost_usd, denials}]}' "$out/meta.json"

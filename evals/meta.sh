@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # 실행 디렉토리의 기록으로 meta.json과 phaseN.trace.txt를 만든다. run.sh가 부르고, 기록만 남은 실행을 다시 집계할 때도 쓴다.
-# 사용: evals/meta.sh 결과디렉토리 fixture model rep
+# 사용: evals/meta.sh 결과디렉토리 fixture model rep [skill]   skill은 dwarf(기본) 또는 none(스킬 없음 기준선)
 set -uo pipefail
 
 EVALS_DIR=$(cd "$(dirname "$0")" && pwd)
-out=$1 fixture=$2 model=$3 rep=$4
+out=$1 fixture=$2 model=$3 rep=$4 skill=${5:-dwarf}
 
 # 채점 자료 유출: 실행 기록에 evals 경로가 나오면 그 실행은 무효
 leak=$(cat "$out"/phase*.jsonl | grep -c "$EVALS_DIR")
@@ -16,9 +16,10 @@ docs=$(tool_uses | jq -r '.input | tostring' \
 tools=$(tool_uses | jq -r .name | sort | uniq -c \
   | jq -R 'capture("^ *(?<n>[0-9]+) (?<t>.+)$") | {(.t): (.n | tonumber)}' | jq -sc 'add // {}')
 
-jq -s --arg fixture "$fixture" --arg model "$model" --arg rep "$rep" --argjson leak "$leak" \
+jq -s --arg fixture "$fixture" --arg model "$model" --arg rep "$rep" --arg skill "$skill" --argjson leak "$leak" \
   --argjson docs "$docs" --argjson tools "$tools" '
-  {fixture: $fixture, model: $model, rep: ($rep | tonumber? // $rep), leak_mentions: $leak, docs_read: $docs, tool_counts: $tools,
+  {fixture: $fixture, model: $model, rep: ($rep | tonumber? // $rep), skill: $skill,
+   leak_mentions: $leak, docs_read: $docs, tool_counts: $tools,
    phases: [.[] | {subtype, is_error, num_turns, duration_ms, cost_usd: .total_cost_usd,
                    denials: ((.permission_denials // []) | length), session_id}],
    total_cost_usd: ([.[].total_cost_usd // 0] | add)}' "$out"/phase*.result.json >"$out/meta.json"

@@ -72,6 +72,7 @@
 | 관문 규칙 변경 | `references/gate.md`, `hooks/gate.py`의 안내 문구, `tests/gate-hook.sh`, 관문을 쓰는 playbook(bug-fix·incident·feature) |
 | 상태 파일 규칙 변경 | `references/state.md`, `references/headless.md`, `hooks/gate.py`의 안내 문구, `evals/run.sh`의 상태 파일 복사 |
 | 라우터 frontmatter의 hooks | 값은 줄마다 JSON으로 쓴다. `evals/run.sh`가 그대로 읽어 2단계에 `--settings`로 넘긴다 |
+| 스킬 추가·삭제 | `evals/run.sh`의 스킬 없음 기준선은 `skills/*/`를 모두 끈다. 디렉토리 밖에 스킬을 두면 목록에 더한다 |
 | playbook·leaf 단계·보고 형식 변경 | 그 playbook을 쓰는 `evals/` fixture의 `rubric.md`. 비용을 확인한 뒤 재실행 |
 | playbook·leaf 책임 분담, leaf 분리 기준 | `AGENTS.md` 작성 규칙 |
 
