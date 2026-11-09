@@ -22,6 +22,8 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | 7 | 스킬 없음 기준선 (`NO_SKILL=1`) | 완료. `bugfix-oversell-race` haiku 첫 측정 결과 아래 |
 | 8 | 상태 파일 단일화 (todo 제거, 다른 세션에서 이어 가기) | 완료. 무인 실행 회귀 확인. 새 세션 이어 가기는 미측정 |
 | 9 | 결과가 갈리는 fixture (`bugfix-negative-stock`) | 완료. haiku·sonnet 모두 숨김 테스트가 갈렸다(dwarf 14/14, 기준선 12/14). 결과 아래 |
+| 10 | `root-cause` leaf 보강 (같은 결함의 다른 곳을 모양으로 찾기) | 구현. 측정 불가: haiku가 leaf를 읽지 않음(8회 중 6회). leaf 생략 방지가 먼저 |
+| 11 | Codex·omp 실행기 (`evals/run-codex.sh`, `evals/run-omp.sh`, luna·terra·sol) | 완료. omp 6회 측정. GPT는 기준선도 숨김 14/14라 과정 기준에서만 갈린다(dwarf +1~+6). 결과 아래 |
 
 ## 3. incident
 
@@ -331,11 +333,104 @@ Claude Code 2.1.319, 임시 프로젝트의 skill로 실험했다.
 - `root-cause` leaf를 손본 뒤 같은 4회(haiku dwarf 2회면 충분)로 기준 3이 1 → 2가 되는지.
 - 기준선의 요청 없는 커밋(4회 중 3회)은 스킬 밖 문제라 측정만 한다. 관문이 있으면 2단계 "진행"이 구현 지시로 읽혀 커밋까지 가지 않는다.
 
+## 10. root-cause leaf 보강
+
+### 배경
+
+- 9절에서 dwarf 4회 중 3회가 `cancel`의 이중 환불을 놓쳤다. 모두 가설을 일찍 지운 것이다("status 가드가 있다", "재고를 더하는 쪽이라 무관", "두 곳뿐"). 원인 커밋을 찾지 않은 것도 2회.
+
+### 바꾼 것
+
+- `skills/root-cause/SKILL.md`. "같은 결함의 다른 곳"을 5단계에서 떼어 6단계로 두었다. 결함의 모양을 한 줄로 적고 grep으로 후보를 전부 나열하며, 모양이 같은지로만 판단하고 증상의 방향이나 "요청한 증상을 만들지 않는다"는 이유로 지우지 않는다. 검사가 있어도 검사와 변경 사이에 await·I/O가 있으면 같은 결함이다. 지운 후보도 출력에 남긴다. 2단계 이력 조사는 파일별 `git log -p -- <파일>`로.
+
+### 결과 (2026-11-09, haiku dwarf 2회, 이전 2회와 함께 판정)
+
+| 실행 | leaf | 판정 (14점) | 기준 2 원인 커밋 | 기준 3 같은 결함 | 기준 5 관문 | root-cause 읽음 | 비용 (USD) | 턴 |
+|---|---|---|---|---|---|---|---|---|
+| haiku-1 | 전 | 13 | 2 | 1 | 2 | 예 | 0.18 | 44 |
+| haiku-2 | 전 | 12 | 1 | 2 | 2 | 아니오 | 0.10 | 36 |
+| haiku-3 | 후 | 13 | 1 | 2 | 2 | 아니오 | 0.09 | 31 |
+| haiku-4 | 후 | 12 | 2 | 2 | 1 (worktree 3개 남김) | 아니오 | 0.38 | 71 |
+
+- 측정이 성립하지 않는다. 바꾼 뒤 두 실행 모두 `root-cause/SKILL.md`를 읽지 않았다. bug-fix playbook 1단계가 "`root-cause` 스킬로 재현하고"라고 해도 haiku는 leaf를 열지 않고 직접 한다. haiku bug-fix 8회 중 읽은 것은 2회, sonnet은 2/2.
+- 기준 3은 바뀐 뒤 2·2지만 바뀌기 전도 1·2였고, 읽지 않았으니 leaf 효과가 아니다. haiku-3은 이중 취소를 재현(재고 4, 환불 2건)까지 했다.
+- 새로 보인 것. haiku-4가 worktree 3개를 남겼고(`/tmp/dwarf-wt/`), haiku-3은 상태 파일을 쓰지 않았다(`state-status` 비어 있음). 둘 다 "읽지 않은 문서의 규칙"이다. haiku-3은 `references/state.md`도 읽지 않았다.
+- 병렬 실행 간섭. haiku-3·4가 같은 고정 경로 `/tmp/dwarf-wt`에 worktree를 만들었다. haiku-3은 haiku-4가 만든 worktree를 자기 것으로 알고 시험 변경을 넣었다가 되돌렸다. root-cause leaf의 `mktemp -d` 규칙을 읽지 않은 결과이고, 병렬 측정은 이런 간섭을 받을 수 있다.
+- 판정 흔들림. haiku-2는 앞선 판정에서 13(기준 4가 2)이었고 이번에는 12(기준 4가 1). 같은 기록을 다시 판정해도 1점은 움직인다.
+- 결론. leaf 문구를 고치는 것보다 leaf를 읽게 하는 것이 먼저다. 관문 hook은 playbook 열기와 inspect만 강제한다(`INSPECT_BEFORE_GATE`, `INSPECT_AFTER_CHANGE`). 같은 방식으로 bug-fix·incident는 관문 `pending` 기록 전에 `root-cause/SKILL.md`를 읽어야 하게 할 수 있다. 관문 규칙 변경이라 `gate.md`, `gate.py`, `tests/gate-hook.sh`, playbook을 함께 고쳐야 하고, 사용자 판단 뒤에 한다.
+
+### 다음
+
+- hook에 root-cause 강제를 넣을지 결정. 넣으면 haiku dwarf 2회로 읽기 여부와 기준 3을 다시 잰다.
+- 상태 파일(`state.md`)도 같은 문제다. hook이 `state.md` 읽기나 상태 파일 존재를 강제하지 않는다.
+
+## 11. Codex 실행기
+
+### 배경
+
+- 외부 교차 검증은 GPT 계열(codex)로 한다(목표와 방식). 같은 fixture를 codex의 luna·terra·sol로 돌려 dwarf 유무의 차이가 모델 계열을 넘어 나타나는지 본다.
+
+### 바꾼 것
+
+- `evals/run-codex.sh`. `run.sh`의 Codex판. `codex exec --json`으로 1단계, `codex exec resume <thread>`로 2단계. 실행마다 결과 디렉토리 아래 임시 `CODEX_HOME`을 만들어 `auth.json`만 복사하고, dwarf 모드는 이 저장소의 `skills/*`를 그 안에 링크하며 요청 앞의 `/dwarf`를 `$dwarf` 멘션으로 바꾼다. `NO_SKILL=1`이면 링크하지 않고 `/dwarf`만 뗀다. 사용자의 `~/.codex` 설정·AGENTS.md·메모리·세션 기록은 쓰지 않는다. 무인 실행 안내는 임시 `CODEX_HOME/AGENTS.md`에 둔다. 산출물(`phaseN.report.md`, `phaseN.trace.txt`, `checks.txt`, `diff.patch`, `meta.json`)은 `run.sh`와 같은 모양이라 `judge.sh`에 섞어 넣을 수 있다. 비용은 codex가 주지 않아 토큰 수를 적는다(`meta-codex.sh`).
+- `evals/workspace.sh`. 작업 공간 준비(repo 복사, `history.sh`)를 `run.sh`에서 떼어 두 실행기가 공유한다.
+
+### 확인한 것 (2026-11-09, 모델 호출 최소)
+
+- `$dwarf` 멘션으로 라우터가 주입된다. 명령 없이 라우터의 섹션 제목을 답했다.
+- 격리된 `CODEX_HOME/AGENTS.md`가 지시로 전달된다.
+- `codex exec resume <thread>`에 `-c`·`-m`·`-o`·`--json`이 먹고 같은 thread가 이어진다.
+- 스텁 codex로 `run-codex.sh`를 끝까지 돌려 산출물과 `meta.json`이 `judge.sh`가 읽는 모양인지 확인했다. 실제 모델 실행은 아래 제약으로 못 했다.
+
+### 제약
+
+- 이 머신의 codex 샌드박스(bwrap)가 동작하지 않는다. `workspace-write`는 네트워크 격리를 꺼도(`sandbox_workspace_write.network_access=true`) uid map에서 거부된다. `CODEX_SANDBOX=danger-full-access`로 돌려야 하는데, Claude Code auto mode가 샌드박스 없는 codex 실행을 막는다(2026-11-09 확인). 사용자가 터미널이나 `!`로 직접 실행한다.
+- Codex에는 관문 hook이 없다(`harness.md`). 승인 전 무변경은 규칙만으로 지켜야 하므로, Claude Code 실행과 기준 5를 같은 잣대로 비교하지 않는다.
+- Codex는 `disable-model-invocation`을 모른다. 25개 스킬의 설명이 모두 모델에 보인다. Claude Code에서는 라우터만 호출되고 leaf는 경로로 읽는 것과 다르다.
+
+### omp 실행기
+
+- Codex가 막혀 omp(`omp -p --mode json`)로 같은 측정을 한다. 같은 ChatGPT 로그인(provider `openai-codex`)으로 luna·terra·sol을 쓴다.
+- `evals/run-omp.sh`·`evals/meta-omp.sh`. `--skills`로 이 저장소의 스킬만 보이게 하고 요청 앞의 `/dwarf`를 `/skill:dwarf`로 바꾼다. `NO_SKILL=1`은 `--no-skills`. 세션은 결과 디렉토리 아래 `sessions/`, 2단계는 `-c`. 무인 안내는 `--append-system-prompt`. 비용은 omp가 usage에 넣는 추정치의 합. `meta.json`에 `harness: omp`, `provider`, `effort`(thinking).
+- 확인한 것(2026-11-09, 작은 프롬프트). `/skill:dwarf`를 주면 모델이 `read skill://dwarf`로 라우터를 읽는다. print 모드에서 파일 쓰기가 승인 없이 된다. `--session-dir`+`-c`로 같은 세션이 이어진다. Claude Code auto mode가 `omp -p`는 막지 않는다. 스텁으로 `run-omp.sh`를 끝까지 돌려 산출물이 `judge.sh` 모양인지 확인했다.
+- 차이. omp는 사용자의 `~/.omp/agent/AGENTS.md`(25줄)를 읽는다. Claude Code 실행도 사용자의 `~/.claude/CLAUDE.md`를 읽으므로 같은 조건으로 본다. omp 세션의 다른 스킬은 두 모드 모두 보이지 않는다.
+
+### 결과 (2026-11-09, omp · openai-codex · thinking medium · 각 1회, 판정 opus)
+
+Herdr 탭 2개에서 dwarf 열과 기준선 열을 병렬로, 열 안에서는 luna → terra → sol 순차로 돌렸다. 판정 `judge-20261109-174358-bugfix-negative-stock`.
+
+| 모델 | 스킬 | 판정 (14) | 기준 1~7 | 시니어 | 숨김 | 승인 전 수정 | 비용 (omp 추정 USD) | 턴 | 시간 |
+|---|---|---|---|---|---|---|---|---|---|
+| gpt-6-luna | dwarf | 11 | 2,1,1,1,2,2,2 | 예 | 14/14 | 없음 | 0.02 | 10+21 | 5분 |
+| gpt-6-luna | none | 5 | 0,1,1,0,1,1,1 | 아니오 | 14/14 | 있음 | 0.01 | 16+11 | 2분 |
+| gpt-6.1-terra | dwarf | 9 | 2,1,1,0,1,2,2 | 예 | 14/14 | 있음 | 0.16 | 17+8 | 3분 |
+| gpt-6.1-terra | none | 8 | 2,1,1,0,1,1,2 | 예 | 14/14 | 있음 | 0.07 | 11+3 | 2분 |
+| gpt-6.1-sol | dwarf | 12 | 2,1,2,1,2,2,2 | 예 | 14/14 | 없음 | 0.47 | 22+13 | 9분 |
+| gpt-6.1-sol | none | 10 | 2,1,1,1,1,2,2 | 예 | 14/14 | 있음 | 0.22 | 15+4 | 4분 |
+
+- 결과는 갈리지 않았다. GPT 세 모델은 기준선도 숨김 14/14다. 기준선이 처음부터 저장소 원자 연산(`consume`·`decrement`)을 골랐고, haiku·sonnet 기준선의 "먼저 빼고 되돌림"을 아무도 하지 않았다. 이 fixture의 함정은 Claude 기준선에만 걸린다.
+- 과정에서 갈린다. dwarf가 luna +6, terra +1, sol +2. 재현·관문·테스트 먼저 쓰기·보고 구조에서 벌어진다. luna 기준선은 재현 없이 예약에만 lock을 걸었다가 2단계에서 바꿨다(5점).
+- 원인 커밋은 6회 모두 못 찾았다(기준 2 전부 1). 어느 실행도 `git log`를 보지 않았다. `root-cause`를 읽은 terra·sol도 마찬가지다. leaf 2단계가 "회귀면"으로 시작하는데 요청에 정상이던 시점이 없어 회귀로 보지 않은 것으로 보인다. Claude haiku는 4회 중 2회 찾았다.
+- 같은 결함의 다른 곳. `root-cause`를 읽은 것은 terra·sol(luna는 안 읽음). sol만 cancel 이중 환불을 재현하고 restock이 안전한 이유까지 구분했다(기준 3 = 2). 10절에서 바꾼 6단계가 한 번은 먹었다.
+- 관문. terra dwarf는 `gate`를 `pending`으로 쓰고도 1단계에서 테스트·저장소·README를 고쳤다. hook이 없는 harness에서는 규칙만으로 관문이 지켜지지 않는 사례. luna·sol은 지켰다. 상태 파일은 셋 다 썼다.
+- 기준선의 요청 없는 커밋은 0/3이다. Claude 기준선(3/4)과 다르다.
+- 비용은 omp가 usage에 넣는 추정치다. ChatGPT 로그인이라 실제 청구와 다르다. 모델 간 상대 비교에만 쓴다. 속도는 Claude보다 빠르다(2~9분).
+
+### 다음
+
+- GPT에서도 결과가 갈리려면 fixture가 더 필요하다. 세 기준선 모두 cancel을 놓쳤으므로 cancel 이중 환불을 요청 안으로 넣는 변형(예: 취소 환불 중복 신고를 증상에 포함)이 후보다. 지금은 `optional-`이다.
+- `root-cause` 2단계의 이력 조사를 "회귀면"에 묶지 않고, 결함 지점의 이력을 항상 한 번 보게 할지 결정한다. 6/6이 커밋을 못 찾았다.
+- 관문을 hook 없이 지키게 할 방법(omp 확장, codex hooks)은 harness별이라 따로 본다. 현재는 Claude Code에서만 강제된다.
+- Codex는 사용자가 돌릴 때 같은 방식으로 판정한다.
+- 실행기가 셋(`run.sh`, `run-codex.sh`, `run-omp.sh`)이라 단계 절차가 겹친다. 한 실행기에 harness 어댑터를 두는 정리는 다음 변경 때 한다.
+
 ## 외부 검증 환경 메모
 
 - 이 머신의 codex(0.162.1)는 샌드박스가 동작하지 않는다. `kernel.apparmor_restrict_unprivileged_userns = 1` 때문에 bwrap이 실패한다.
 - `danger-full-access`로 실행하는 것은 Claude Code auto mode가 막는다. fixture를 codex로 돌리려면 사용자가 허용 규칙을 추가하거나 `!`로 직접 실행해야 한다.
 - 문서 검토는 `codex exec -s read-only`로 할 수 있다. 명령 실행이 막힌 채로 텍스트만 본다. incident 초안 검토에 썼다.
+- `workspace-write`는 `sandbox_workspace_write.network_access=true`로도 안 된다(2026-11-09). bwrap이 uid map에서 거부된다. 고치려면 bwrap에 user namespace를 허용하는 AppArmor 프로파일을 두거나 sysctl을 바꿔야 한다. 시스템 설정이라 사용자가 결정한다.
+- `$dwarf` 멘션으로 라우터가 주입되고 격리된 `CODEX_HOME/AGENTS.md`가 지시로 전달되는 것을 `codex exec`에서 확인했다(2026-11-09). 11절.
 
 ## 재현
 
