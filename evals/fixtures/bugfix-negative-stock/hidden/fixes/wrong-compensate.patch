@@ -1,0 +1,36 @@
+diff -ruN a/src/inventory/reservations.js b/src/inventory/reservations.js
+--- a/src/inventory/reservations.js	2026-11-09 14:06:02.533173502 +0900
++++ b/src/inventory/reservations.js	2026-11-09 14:06:02.538173671 +0900
+@@ -12,7 +12,12 @@
+       const available = await repo.get(sku);
+       if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
+       const price = await pricing.quote(sku, qty);
+-      await repo.adjust(sku, -qty);
++      // 확인과 차감 사이에 다른 판매·예약이 끼면 재고가 음수가 되므로, 뺀 뒤 음수면 되돌리고 거절한다.
++      const left = await repo.adjust(sku, -qty);
++      if (!item.backorderable && left < 0) {
++        await repo.adjust(sku, qty);
++        throw new InsufficientStock(sku, left + qty, qty);
++      }
+       const reservation = {
+         id: newId('rsv'),
+         sku,
+diff -ruN a/src/pos/sales.js b/src/pos/sales.js
+--- a/src/pos/sales.js	2026-11-09 14:06:02.533173502 +0900
++++ b/src/pos/sales.js	2026-11-09 14:06:02.538173671 +0900
+@@ -10,9 +10,12 @@
+     async recordSale(sku, qty, registerId) {
+       catalog.get(sku);
+       if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
+-      const available = await repo.get(sku);
+-      if (available < qty) throw new InsufficientStock(sku, available, qty);
+-      await repo.adjust(sku, -qty);
++      // 먼저 확인하고 나중에 빼면 동시 판매가 둘 다 통과한다. 뺀 뒤 음수면 되돌리고 거절한다.
++      const left = await repo.adjust(sku, -qty);
++      if (left < 0) {
++        await repo.adjust(sku, qty);
++        throw new InsufficientStock(sku, left + qty, qty);
++      }
+       const sale = { id: newId('sale'), sku, qty, registerId, status: 'sold', soldAt: clock.now().toISOString() };
+       sales.set(sale.id, sale);
+       logger.info('sale.recorded', { id: sale.id, sku, qty, registerId });

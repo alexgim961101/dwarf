@@ -1,0 +1,59 @@
+diff -ruN a/src/inventory/reservations.js b/src/inventory/reservations.js
+--- a/src/inventory/reservations.js	2026-11-09 13:04:36.181942145 +0900
++++ b/src/inventory/reservations.js	2026-11-09 13:04:36.184942254 +0900
+@@ -5,26 +5,36 @@
+ export function createReservations({ repo, catalog, pricing, refunds, clock, logger }) {
+   const reservations = new Map();
+ 
++  // 예약은 한 번에 하나씩 처리해 확인과 차감 사이에 다른 예약이 끼지 않게 한다.
++  let chain = Promise.resolve();
++  const serialize = (fn) => {
++    const next = chain.then(fn, fn);
++    chain = next.catch(() => {});
++    return next;
++  };
++
+   return {
+-    async reserve(sku, qty, customerId) {
+-      const item = catalog.get(sku);
+-      if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
+-      const available = await repo.get(sku);
+-      if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
+-      const price = await pricing.quote(sku, qty);
+-      await repo.adjust(sku, -qty);
+-      const reservation = {
+-        id: newId('rsv'),
+-        sku,
+-        qty,
+-        customerId,
+-        price,
+-        status: 'active',
+-        createdAt: clock.now().toISOString(),
+-      };
+-      reservations.set(reservation.id, reservation);
+-      logger.info('reservation.created', { id: reservation.id, sku, qty, backorder: available < qty });
+-      return reservation;
++    reserve(sku, qty, customerId) {
++      return serialize(async () => {
++        const item = catalog.get(sku);
++        if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
++        const available = await repo.get(sku);
++        if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
++        const price = await pricing.quote(sku, qty);
++        await repo.adjust(sku, -qty);
++        const reservation = {
++          id: newId('rsv'),
++          sku,
++          qty,
++          customerId,
++          price,
++          status: 'active',
++          createdAt: clock.now().toISOString(),
++        };
++        reservations.set(reservation.id, reservation);
++        logger.info('reservation.created', { id: reservation.id, sku, qty, backorder: available < qty });
++        return reservation;
++      });
+     },
+ 
+     async cancel(id) {

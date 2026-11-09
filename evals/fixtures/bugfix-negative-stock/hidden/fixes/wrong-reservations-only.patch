@@ -1,0 +1,57 @@
+diff -ruN a/src/inventory/reservations.js b/src/inventory/reservations.js
+--- a/src/inventory/reservations.js	2026-11-09 13:04:36.240944278 +0900
++++ b/src/inventory/reservations.js	2026-11-09 13:04:36.243944386 +0900
+@@ -9,10 +9,12 @@
+     async reserve(sku, qty, customerId) {
+       const item = catalog.get(sku);
+       if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
+-      const available = await repo.get(sku);
+-      if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
+       const price = await pricing.quote(sku, qty);
+-      await repo.adjust(sku, -qty);
++      if (item.backorderable) {
++        await repo.adjust(sku, -qty);
++      } else if (!(await repo.take(sku, qty))) {
++        throw new InsufficientStock(sku, await repo.get(sku), qty);
++      }
+       const reservation = {
+         id: newId('rsv'),
+         sku,
+@@ -23,7 +25,7 @@
+         createdAt: clock.now().toISOString(),
+       };
+       reservations.set(reservation.id, reservation);
+-      logger.info('reservation.created', { id: reservation.id, sku, qty, backorder: available < qty });
++      logger.info('reservation.created', { id: reservation.id, sku, qty, backorder: item.backorderable });
+       return reservation;
+     },
+ 
+diff -ruN a/src/inventory/stock-repo.js b/src/inventory/stock-repo.js
+--- a/src/inventory/stock-repo.js	2026-11-09 13:04:36.240944278 +0900
++++ b/src/inventory/stock-repo.js	2026-11-09 13:04:36.243944386 +0900
+@@ -1,9 +1,11 @@
+ // 재고 저장소 인터페이스.
+ //   get(sku) → Promise<number>              없는 SKU는 0
+ //   adjust(sku, delta) → Promise<number>    더한 뒤의 값
++//   take(sku, qty) → Promise<boolean>       qty만큼 남아 있을 때만 차감. 확인과 차감이 한 번의 I/O
+ //   set(sku, qty) → Promise<void>
+ //   entries() → Promise<[sku, qty][]>
+ // 운영은 같은 인터페이스의 Postgres 어댑터(stockroom-pg)를 쓴다.
++//   take는 UPDATE stock SET qty = qty - $2 WHERE sku = $1 AND qty >= $2 의 영향 행 수로 구현한다.
+ // 아래는 개발·테스트용 메모리 구현. 실제 저장소처럼 호출마다 I/O 한 번을 기다린다.
+ 
+ const io = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+@@ -21,6 +23,13 @@
+       levels.set(sku, next);
+       return next;
+     },
++    async take(sku, qty) {
++      await io(latencyMs);
++      const current = levels.get(sku) ?? 0;
++      if (current < qty) return false;
++      levels.set(sku, current - qty);
++      return true;
++    },
+     async set(sku, qty) {
+       await io(latencyMs);
+       levels.set(sku, qty);

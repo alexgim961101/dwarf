@@ -1,0 +1,102 @@
+diff -ruN a/src/inventory/reservations.js b/src/inventory/reservations.js
+--- a/src/inventory/reservations.js	2026-11-09 13:04:36.269945326 +0900
++++ b/src/inventory/reservations.js	2026-11-09 13:04:36.272945434 +0900
+@@ -5,26 +5,37 @@
+ export function createReservations({ repo, catalog, pricing, refunds, clock, logger }) {
+   const reservations = new Map();
+ 
++  // SKU별로 예약을 줄 세워 확인과 차감 사이에 같은 SKU의 다른 예약이 끼지 않게 한다.
++  const locks = new Map();
++  const withSkuLock = (sku, fn) => {
++    const prev = locks.get(sku) ?? Promise.resolve();
++    const run = prev.then(fn, fn);
++    locks.set(sku, run.catch(() => {}));
++    return run;
++  };
++
+   return {
+-    async reserve(sku, qty, customerId) {
+-      const item = catalog.get(sku);
+-      if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
+-      const available = await repo.get(sku);
+-      if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
+-      const price = await pricing.quote(sku, qty);
+-      await repo.adjust(sku, -qty);
+-      const reservation = {
+-        id: newId('rsv'),
+-        sku,
+-        qty,
+-        customerId,
+-        price,
+-        status: 'active',
+-        createdAt: clock.now().toISOString(),
+-      };
+-      reservations.set(reservation.id, reservation);
+-      logger.info('reservation.created', { id: reservation.id, sku, qty, backorder: available < qty });
+-      return reservation;
++    reserve(sku, qty, customerId) {
++      return withSkuLock(sku, async () => {
++        const item = catalog.get(sku);
++        if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
++        const available = await repo.get(sku);
++        if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
++        const price = await pricing.quote(sku, qty);
++        await repo.adjust(sku, -qty);
++        const reservation = {
++          id: newId('rsv'),
++          sku,
++          qty,
++          customerId,
++          price,
++          status: 'active',
++          createdAt: clock.now().toISOString(),
++        };
++        reservations.set(reservation.id, reservation);
++        logger.info('reservation.created', { id: reservation.id, sku, qty, backorder: available < qty });
++        return reservation;
++      });
+     },
+ 
+     async cancel(id) {
+diff -ruN a/src/pos/sales.js b/src/pos/sales.js
+--- a/src/pos/sales.js	2026-11-09 13:04:36.269945326 +0900
++++ b/src/pos/sales.js	2026-11-09 13:04:36.272945434 +0900
+@@ -6,17 +6,28 @@
+ export function createSales({ repo, catalog, clock, logger }) {
+   const sales = new Map();
+ 
++  // SKU별로 판매를 줄 세운다.
++  const locks = new Map();
++  const withSkuLock = (sku, fn) => {
++    const prev = locks.get(sku) ?? Promise.resolve();
++    const run = prev.then(fn, fn);
++    locks.set(sku, run.catch(() => {}));
++    return run;
++  };
++
+   return {
+-    async recordSale(sku, qty, registerId) {
+-      catalog.get(sku);
+-      if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
+-      const available = await repo.get(sku);
+-      if (available < qty) throw new InsufficientStock(sku, available, qty);
+-      await repo.adjust(sku, -qty);
+-      const sale = { id: newId('sale'), sku, qty, registerId, status: 'sold', soldAt: clock.now().toISOString() };
+-      sales.set(sale.id, sale);
+-      logger.info('sale.recorded', { id: sale.id, sku, qty, registerId });
+-      return sale;
++    recordSale(sku, qty, registerId) {
++      return withSkuLock(sku, async () => {
++        catalog.get(sku);
++        if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
++        const available = await repo.get(sku);
++        if (available < qty) throw new InsufficientStock(sku, available, qty);
++        await repo.adjust(sku, -qty);
++        const sale = { id: newId('sale'), sku, qty, registerId, status: 'sold', soldAt: clock.now().toISOString() };
++        sales.set(sale.id, sale);
++        logger.info('sale.recorded', { id: sale.id, sku, qty, registerId });
++        return sale;
++      });
+     },
+ 
+     async voidSale(id) {

@@ -1,0 +1,15 @@
+diff -ruN a/src/inventory/reservations.js b/src/inventory/reservations.js
+--- a/src/inventory/reservations.js	2026-11-09 13:04:36.210943193 +0900
++++ b/src/inventory/reservations.js	2026-11-09 13:04:36.213943302 +0900
+@@ -9,9 +9,10 @@
+     async reserve(sku, qty, customerId) {
+       const item = catalog.get(sku);
+       if (!Number.isInteger(qty) || qty <= 0) throw new InvalidQuantity(qty);
++      // 가격 조회를 먼저 끝내 확인과 차감 사이에 await가 없게 한다.
++      const price = await pricing.quote(sku, qty);
+       const available = await repo.get(sku);
+       if (!item.backorderable && available < qty) throw new InsufficientStock(sku, available, qty);
+-      const price = await pricing.quote(sku, qty);
+       await repo.adjust(sku, -qty);
+       const reservation = {
+         id: newId('rsv'),

@@ -1,0 +1,12 @@
+[
+  { "sku": "TEE-BLK-M", "name": "기본 티셔츠 블랙 M", "backorderable": false },
+  { "sku": "TEE-BLK-L", "name": "기본 티셔츠 블랙 L", "backorderable": false },
+  { "sku": "TEE-WHT-M", "name": "기본 티셔츠 화이트 M", "backorderable": false },
+  { "sku": "HOOD-GRY-L", "name": "후디 그레이 L", "backorderable": false },
+  { "sku": "CAP-NVY", "name": "볼캡 네이비", "backorderable": false },
+  { "sku": "SOCK-3P", "name": "양말 3켤레", "backorderable": false },
+  { "sku": "BAG-TOTE", "name": "토트백", "backorderable": false },
+  { "sku": "PRE-JKT-01", "name": "[예약] 가을 자켓", "backorderable": true },
+  { "sku": "PRE-BOOT-02", "name": "[예약] 첼시 부츠", "backorderable": true },
+  { "sku": "GIFT-CARD-50", "name": "기프트 카드 5만원", "backorderable": true }
+]

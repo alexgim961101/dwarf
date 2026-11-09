@@ -1,0 +1,15 @@
+diff -ruN a/src/reports/daily.js b/src/reports/daily.js
+--- a/src/reports/daily.js	2026-11-09 13:04:36.132940374 +0900
++++ b/src/reports/daily.js	2026-11-09 13:04:36.143940772 +0900
+@@ -1,9 +1,9 @@
+-// 일일 재고 리포트. 카탈로그의 모든 상품을 이름순으로, 재고 0인 상품도 함께.
++// 일일 재고 리포트. 카탈로그의 모든 상품을 이름순으로, 재고 0인 상품도 함께. 음수는 0으로 보인다.
+ export async function dailyStockReport({ repo, catalog, clock }) {
+   const levels = new Map(await repo.entries());
+   const lines = catalog
+     .all()
+     .sort((a, b) => a.name.localeCompare(b.name, 'ko'))
+-    .map((item) => `${item.sku}\t${levels.get(item.sku) ?? 0}\t${item.name}`);
++    .map((item) => `${item.sku}\t${Math.max(0, levels.get(item.sku) ?? 0)}\t${item.name}`);
+   return [`# 재고 ${clock.now().toISOString().slice(0, 10)}`, 'sku\tqty\tname', ...lines].join('\n');
+ }

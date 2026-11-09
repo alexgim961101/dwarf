@@ -1,0 +1,20 @@
+diff -ruN a/src/inventory/stock-repo.js b/src/inventory/stock-repo.js
+--- a/src/inventory/stock-repo.js	2026-11-09 13:04:36.043937158 +0900
++++ b/src/inventory/stock-repo.js	2026-11-09 13:04:36.047937302 +0900
+@@ -1,6 +1,6 @@
+ // 재고 저장소 인터페이스.
+ //   get(sku) → Promise<number>              없는 SKU는 0
+-//   adjust(sku, delta) → Promise<number>    더한 뒤의 값
++//   adjust(sku, delta) → Promise<number>    더한 뒤의 값. 0 아래로 내려가지 않는다
+ //   set(sku, qty) → Promise<void>
+ //   entries() → Promise<[sku, qty][]>
+ // 운영은 같은 인터페이스의 Postgres 어댑터(stockroom-pg)를 쓴다.
+@@ -17,7 +17,7 @@
+     },
+     async adjust(sku, delta) {
+       await io(latencyMs);
+-      const next = (levels.get(sku) ?? 0) + delta;
++      const next = Math.max(0, (levels.get(sku) ?? 0) + delta);
+       levels.set(sku, next);
+       return next;
+     },
