@@ -9,7 +9,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 - 개선마다 `evals/`로 전후를 잰다. 결정적 채점(`check.sh`)과 블라인드 판정(`judge.sh`)을 함께 본다.
 - 외부 교차 검증은 GPT 계열 모델(codex·omp)로만 하고 effort를 명시한다. 예: `codex exec -m gpt-6.1-sol -c model_reasoning_effort=high`.
 
-## 항목 상태 (2026-11-06)
+## 항목 상태 (2026-11-09)
 
 | # | 항목 | 상태 |
 |---|---|---|
@@ -19,6 +19,8 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | 4 | 단계 생략 방지 (playbook 미열람, inspect 생략) | 완료. 측정 결과와 남은 문제 아래 |
 | 5 | headless 실행 상태 (todo 대신 상태 파일, `--resume` hook) | 완료. 측정 결과 아래 |
 | 6 | 파이프라인 (Jira·GitHub intake, Discord 질의, GitHub·Bitbucket PR) | 담당 Agent 구현·통합 확인까지. 실제 서비스 연결 전 |
+| 7 | 스킬 없음 기준선 (`NO_SKILL=1`) | 완료. `bugfix-oversell-race` haiku 첫 측정 결과 아래 |
+| 8 | 상태 파일 단일화 (todo 제거, 다른 세션에서 이어 가기) | 완료. 무인 실행 회귀 확인. 새 세션 이어 가기는 미측정 |
 
 ## 3. incident
 
@@ -199,6 +201,72 @@ Claude Code 2.1.319, 임시 프로젝트의 skill로 실험했다.
 - dwarf와의 약속은 #4·#5 그대로: `/dwarf` 시작, `--append-system-prompt`로 무인 실행 알림, `state.md`의 `waiting`·`done`, 이어 갈 때 `--resume`과 라우터 hooks(`--settings`). PR 단계는 dwarf leaf가 아니라 runner가 한다(dwarf에게는 커밋까지만 요청).
 - 확인한 것(2026-11-07): unittest 15개. 실제 claude·dwarf(haiku)로 `bugfix-oversell-race` 저장소를 처리한 통합 확인에서 `waiting` → 답 → `done`, 커밋 1개, push, PR 요청까지 이어졌다(Jira·Discord·Bitbucket은 가짜).
 - 남은 것: Discord 봇과 GitHub 시험 저장소로 `python3 -m dwarf_runner once` 실제 연결 확인, 그다음 Jira·Bitbucket. 상시 실행 방법(launchd 등). Slack은 그 뒤.
+
+## 7. 스킬 없음 기준선
+
+### 배경
+
+- 2026-11-09 트렌드 점검. agentskills.io의 평가 가이드와 Claude Code skills 문서 모두 "스킬 없이 같은 요청을 돌린 기준선"과의 비교를 권장한다. 기존 eval은 전후(스킬 버전)와 모델 간만 재서, dwarf가 비용(토큰·턴)만큼 결과를 좋게 하는지는 몰랐다.
+
+### 바꾼 것
+
+- `evals/run.sh`에 `NO_SKILL=1`. 요청 앞의 `/dwarf `를 떼고, `skills/*/` 전부를 `skillOverrides: off`로 `--settings`에 넘긴다. 스킬을 부르지 않으므로 관문 hook은 걸리지 않는다. 2단계(`resume.md`)도 같은 말로 이어 간다. 결과 디렉토리 이름 끝에 `-noskill`.
+- `meta.sh`에 `skill` 필드(`dwarf`·`none`). 기준선이 dwarf 문서를 읽으면(`docs_read`가 비어 있지 않음) `run.sh`가 경고한다.
+- `judge.sh`는 판정 모델에게 `/dwarf`를 뗀 요청을 보이고, `summary.tsv`에 스킬 열을 더했다. `judge.md`에 "실행 기록에 보이는 스킬 사용으로 가점·감점하지 않는다"를 넣었다.
+- `evals/README.md`에 "스킬 없음 기준선" 절.
+
+### 확인한 것
+
+- 스텁 `claude`(인자만 기록)로 `bugfix-oversell-race`를 두 모드로 돌렸다. 기준선은 1·2단계 모두 `/dwarf` 없는 요청과 22개 스킬의 `skillOverrides`를 받았고 `meta.json`은 `skill: none`, `docs_read: []`. dwarf 모드는 전과 같이 1단계 settings 없음, 2단계 hooks와 `--resume`.
+- `bash -n`, `tests/gate-hook.sh` 38개 PASS.
+- 실제 기준선 실행 2회에서 `docs_read`가 비었고, init 메시지의 스킬 목록에 dwarf 스킬이 없었다. 심볼릭 링크로 설치한 개인 스킬에도 `skillOverrides`가 적용된다.
+
+### 결과 (2026-11-09, `bugfix-oversell-race`, haiku, 각 2회, 판정 opus)
+
+| 실행 | 스킬 | 판정 (14점) | 시니어 수준 | 숨김 테스트 | 승인 전 수정 | 비용 (USD) | 턴 |
+|---|---|---|---|---|---|---|---|
+| A | none | 9 | 아니오 | 6/6 | 있음. 요청 없는 커밋도 함 | 0.02 | 14 |
+| D | none | 9 | 예 | 6/6 | 있음 | 0.02 | 16 |
+| B | dwarf | 13 | 예 | 6/6 | 없음 | 0.06 | 26 |
+| C | dwarf | 14 | 예 | 6/6 | 없음 | 0.06 | 28 |
+
+- 숨김 테스트는 넷 다 통과했다. 차이는 과정과 범위에서 났다. 기준선은 같은 결함의 다른 곳(cancel 이중 환불)을 한 번 놓쳤고, 해결안 비교 없이 바로 고쳤고, 승인 전에 작업 트리를 바꿨다. 한 번은 2단계 "추천한 안으로 진행해줘"를 커밋 지시로 읽었다.
+- 기준 4(해결안 비교)·5(관문 준수)는 playbook에서 나온 과정 기준이라 기준선이 채울 수 없다. 둘을 빼도 dwarf 10/10·10/10, 기준선 8/10·8/10.
+- 비용은 약 3배, 턴은 약 2배. 이 fixture에서 그 비용으로 산 것은 다른 곳의 같은 결함 발견과 승인 전 무변경이다.
+- 표본이 2회씩이고 모델이 haiku 하나라 확정은 아니다. 판정 디렉토리 `evals/results/judge-20261109-112902-bugfix-oversell-race`.
+
+### 남은 측정
+
+- 대상: `feature-partial-cancel`, `ops-stale-dns-fix`. haiku·sonnet 각 2회씩 dwarf와 `NO_SKILL=1`. `bugfix-oversell-race`는 sonnet.
+- 지표: 블라인드 판정 점수와 시니어 수준 비율, 숨김 테스트 PASS 수, 비용·턴 수. 점수 차이가 비용 차이를 정당화하지 못하는 fixture가 있으면 그 playbook에서 줄일 단계를 찾는다.
+
+## 8. 상태 파일 단일화
+
+### 배경
+
+- todo 도구는 Claude Code 버전에 따라 없다. 2.1.319 대화형 세션의 도구 목록에 `TodoWrite`가 없는 것을 확인했다(2026-11-09). 라우터는 "todo 도구가 없으면 답변에 목록"으로 떨어져 진행 상태가 대화에만 남았다.
+- 대화형은 todo, 무인은 `state.md`로 같은 역할의 경로가 둘이었다. 다른 세션에서 이어 가기는 feature(`spec.md` 상태)만 됐다. pstack의 session pickup·pause safely 같은 "세션 이어받기"가 트렌드.
+
+### 바꾼 것
+
+- `references/state.md` 신설. 상태 파일의 위치·형식·쓰기·이어 가기 규칙. `headless.md`의 상태 파일 절은 여기로 옮기고, `headless.md`에는 무인 실행만의 규칙(알아보기, 묻지 않기, `report.md`, 실행하는 쪽과의 약속)만 남겼다.
+- 라우터. 시작 1(상태 파일의 진행 중 playbook을 이어 가기 대상에 포함), 분류의 멈춤 요청, 실행 2(단계를 상태 파일에), 실행 8, playbook 없음에서 todo를 상태 파일로 바꿨다. 80줄 유지.
+- `playbooks/feature.md`의 작업 단위 todo 두 곳, `harness.md`의 todo 행, `hooks/gate.py`의 안내 문구, `README.md`, `AGENTS.md`(references 목록, 함께 갱신 표).
+- 이어 가기 규칙. 요청이 연장이고 `status`가 `waiting`·`running`이면 `[x]`도 skip도 아닌 첫 단계부터. `새 작업`이거나 연장이 아니면 덮어쓴다. 다른 세션에서는 관문을 다시 기록한다(`gate.md`의 세션별 신뢰 규칙 그대로).
+
+### 알려진 마찰
+
+- 다른 세션에서 승인 뒤 단계를 이어 갈 때 관문 재승인이 한 번 더 필요하다. hook이 이전 세션의 `approved`를 믿지 않기 때문이다. 없애려면 hook이 디스크의 gate 파일을 조건부로 인정해야 하는데, 관문 규칙 변경이라 같은 필요가 실제로 두 번 보이면 따로 판단한다.
+
+### 결과 (2026-11-09)
+
+- 위 7절의 dwarf 실행 2/2가 `references/state.md`를 읽고 `.docs/dwarf/state.md`를 새 형식(playbook·status·delegation·체크 목록)으로 썼다. 1단계 끝 `waiting`, 2단계 끝 `done`. 단계 옆에 결과 한 줄과 산출물 경로를 적었다.
+- 편차: 한 실행이 건너뛴 단계를 `[ ] … skip:` 대신 `[skip]`으로 표시했다. 읽는 데 지장이 없어 두고, 두 번 보이면 형식 문구를 손본다.
+
+### 남은 측정
+
+- 회귀: 다른 fixture 실행에서도 `phaseN.state.md`가 남고 `status`가 `waiting` → `done`인지(#5와 같은 지표).
+- 새로 볼 것: 대화형 세션에서 관문 보고 뒤 끊고, 새 세션 `/dwarf 진행해`로 이어 가는 fixture. 상태 파일을 읽고 이어 간 단계부터 시작하는지, 관문을 다시 쓰는지. `run.sh`는 `--resume`을 쓰므로 새 세션 시나리오는 별도 실행 방법이 필요하다.
 
 ## 외부 검증 환경 메모
 

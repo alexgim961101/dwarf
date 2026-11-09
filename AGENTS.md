@@ -94,6 +94,7 @@
 for f in skills/*/SKILL.md; do d=$(basename "$(dirname "$f")"); grep -q "^name: $d$" "$f" && grep -q "^disable-model-invocation: true" "$f" || echo "FAIL $f"; done
 grep -H '^description:.*[<>]' skills/*/SKILL.md
 wc -l skills/dwarf/SKILL.md skills/p-*/SKILL.md
+claude plugin validate skills   # frontmatter 파싱 확인. Claude Code 2.1.233 이상
 
 # install.sh 격리 확인. 실사용 ~/.claude 를 건드리지 않는다
 T=$(mktemp -d) && mkdir "$T/.claude"
