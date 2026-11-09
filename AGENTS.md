@@ -15,7 +15,7 @@
 |---|---|
 | `skills/dwarf/SKILL.md` | 라우터. 인자 해석, 분류 트리, 재라우팅, 실행 규칙 |
 | `skills/dwarf/playbooks/` | 작업 유형별 단계 9개. brainstorm, investigation, review, bug-fix, incident, feature, refactoring, perf, chore |
-| `skills/dwarf/references/` | 공유 참조. `roles`(역할·brief), `agents`(Agent 선택·기록), `harness`(도구별 매핑), `principles`(원칙 색인), `gate`(관문 기록), `headless`(무인 실행) |
+| `skills/dwarf/references/` | 공유 참조. `roles`(역할·brief), `agents`(Agent 선택·기록), `harness`(도구별 매핑), `principles`(원칙 색인), `gate`(관문 기록), `state`(상태 파일·이어 가기), `headless`(무인 실행) |
 | `skills/dwarf/hooks/gate.py` | 관문 hook. `/dwarf`를 부르면 등록되어 관문 기록 없는 작업 트리 수정, playbook을 열기 전의 작업, inspect 없이 끝내기를 막는다 |
 | `skills/p-<name>/` | 원칙 leaf 14개. 적용할 때만 읽음 |
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
@@ -70,6 +70,7 @@
 | 분류 트리 변경 | `tests/routing.md` 재실행 |
 | 역할·brief 변경 | `references/roles.md`, 그 역할을 쓰는 playbook·leaf |
 | 관문 규칙 변경 | `references/gate.md`, `hooks/gate.py`의 안내 문구, `tests/gate-hook.sh`, 관문을 쓰는 playbook(bug-fix·incident·feature) |
+| 상태 파일 규칙 변경 | `references/state.md`, `references/headless.md`, `hooks/gate.py`의 안내 문구, `evals/run.sh`의 상태 파일 복사 |
 | 라우터 frontmatter의 hooks | 값은 줄마다 JSON으로 쓴다. `evals/run.sh`가 그대로 읽어 2단계에 `--settings`로 넘긴다 |
 | playbook·leaf 단계·보고 형식 변경 | 그 playbook을 쓰는 `evals/` fixture의 `rubric.md`. 비용을 확인한 뒤 재실행 |
 | playbook·leaf 책임 분담, leaf 분리 기준 | `AGENTS.md` 작성 규칙 |

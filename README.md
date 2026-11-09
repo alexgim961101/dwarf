@@ -7,7 +7,7 @@
 
 | 호출 | 하는 일 |
 |---|---|
-| `/dwarf <목표>` | 분류 → 서브에이전트 사용 여부 선택 → playbook 단계를 todo에 복사 → 수행 → 보고 → 실행이 만든 자원 정리 |
+| `/dwarf <목표>` | 분류 → 서브에이전트 사용 여부 선택 → playbook 단계를 상태 파일(`.docs/dwarf/state.md`)에 복사 → 수행 → 보고 → 실행이 만든 자원 정리. 멈춘 작업은 다른 세션에서도 상태 파일로 이어 간다 |
 | `/dwarf 새 작업 <목표>` | 진행 중 playbook을 버리고 재매칭 |
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent와 model·effort를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |

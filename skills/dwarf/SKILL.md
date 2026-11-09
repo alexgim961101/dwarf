@@ -18,7 +18,7 @@ hooks:
 1. 인자 해석.
    - `agents` 또는 `agents --here` → `references/agents.md`의 선택 절차를 실행하고 끝낸다. `--here`는 작업 루트 `.dwarf/agents.md`에 기록.
    - `새 작업` 또는 `new task`로 시작 → 진행 중 playbook을 버리고 재매칭한다.
-   - 그 외 → 목표. 대화에 진행 중 playbook이 있고 요청이 그 연장이면 계속하고, 아니면 재매칭한다.
+   - 그 외 → 목표. 대화나 상태 파일(`references/state.md`)에 진행 중 playbook이 있고 요청이 그 연장이면 이어 가고, 아니면 재매칭한다.
 2. 무인 실행이면 먼저 `references/headless.md`를 읽고 따른다. 시스템 프롬프트나 요청에 무인 실행이라고 되어 있거나 Claude Code에 `AskUserQuestion` 도구가 없으면 무인 실행이다. Claude Code가 아니면 `references/harness.md`에서 현재 도구의 행을 읽는다. 이 문서들은 Claude Code 용어가 기본이다.
 3. Agent 매핑을 적용한다. `~/.config/dwarf/agents.md`가 없으면 `references/agents.md` 절차로 묻고 기록한다. 기록된 Agent가 이 세션에 없으면 기본값으로 대체하고 답변에 한 줄 적는다.
 4. `references/principles.md`(원칙 색인)를 읽는다. 적용하는 원칙은 `<dwarf>/../p-<이름>/SKILL.md`를 읽는다.
@@ -40,7 +40,7 @@ hooks:
 
 - 이름·위치 변경은 무엇으로 바꿀지 판단이 필요하면 refactoring("더 명확한 이름으로", "알맞은 모듈로"), 바꿀 결과가 정해져 있으면 chore("A를 B로", "정한 경로로").
 - 지금 안 되는 실행 중인 시스템(서버·컨테이너·클라우드)을 진단·복구하면 incident, 코드의 틀린 결과는 bug-fix, 반복되는 느림·자원 증가를 코드에서 줄이면 perf.
-- 멈춤 요청. 코드는 바꾸지 말고 원인·설계·계획까지만 달라는 요청이다. 예: "원인 분석해줘", "원인만", "설계만", "계획 세워 줘", "알아만 봐", "코드는 건들지 마". bug-fix·incident·perf·feature·refactoring을 각 playbook의 `**멈춤:**` 단계까지 수행하고, 남은 단계는 todo에 `skip: 변경 없음 요청`으로 둔다.
+- 멈춤 요청. 코드는 바꾸지 말고 원인·설계·계획까지만 달라는 요청이다. 예: "원인 분석해줘", "원인만", "설계만", "계획 세워 줘", "알아만 봐", "코드는 건들지 마". bug-fix·incident·perf·feature·refactoring을 각 playbook의 `**멈춤:**` 단계까지 수행하고, 남은 단계는 상태 파일에 `skip: 변경 없음 요청`으로 둔다.
 - "고쳐"처럼 변경 지시가 함께 있거나 증상만 말하면 멈춤 요청이 아니다.
 - 질문(brainstorm·investigation·review)과 변경에 걸치면 변경 쪽.
 - 사용자가 playbook이나 단계를 이름으로 지정하면 그 지정이 분류보다 우선한다.
@@ -57,17 +57,17 @@ hooks:
 1. 위임 여부를 묻는다. 매칭한 playbook과 현재 매핑(`explorer=…, reviewer=…, worker=…`. 기록된 model·effort는 함께)을 보이고 이번 실행에서 서브에이전트를 쓸지 고르게 한다. Claude Code는 `AskUserQuestion`, 다른 도구는 번호 목록. 선택지는 "사용 (매핑대로)"(기본)과 "사용 안 함 (owner가 직접)".
    - 묻지 않는 경우. 요청에 이미 정해져 있다("서브에이전트 없이" 등). 같은 playbook을 이어 간다(앞 선택 유지. playbook이 바뀌면 다시 묻는다). 이번 실행에서 매핑을 막 골랐다. 매핑이 모두 `none`이거나 위임 도구가 없다. 무인 실행이다(매핑대로).
    - "사용 안 함"이면 이번 실행 동안 모든 역할을 `none`으로 본다. 매핑 파일은 바꾸지 않는다.
-2. 매칭한 playbook을 열고 단계를 todo에 그대로 복사한다. 맨 위에 위임 선택을 적는다. todo 도구가 없으면 답변에 목록으로 두고 단계마다 갱신한다. 무인 실행은 `headless.md`의 상태 파일에 둔다.
+2. 매칭한 playbook을 열고 단계를 상태 파일에 그대로 옮긴다(`references/state.md`). 맨 위에 playbook과 위임 선택을 적는다. 이어 가는 작업이면 끝나지 않은 첫 단계부터 한다.
 3. 건너뛰는 단계는 지우지 않고 `skip: <이유>`를 붙인다.
 4. 변경 playbook은 작업 트리를 처음 바꾸기 전에 `references/gate.md`대로 관문을 기록한다. Claude Code에서는 hook이 기록 없는 수정을 막는다. 막히면 그 안내를 따른다.
 5. 각 단계는 owner가 수행한다. 단계가 leaf 스킬(`how`·`why`·`bench`·`inspect` 등)을 부르면 그때 `<dwarf>/../<이름>/SKILL.md`를 읽고 따른다. 자동 호출이 꺼져 있어 `Skill` 도구 목록에 없다. 단계가 역할을 지정하면 `references/roles.md`의 위임 여부와 brief 계약대로 위임한다. 결과는 diff와 출력으로 직접 확인한 뒤 자기 말로 요약한다. 위임 결과를 그대로 전달하지 않는다.
 6. 완료 전 검증. 검증 명령을 실제로 실행하고 출력을 확인한 뒤에만 완료라고 말한다. 실행하지 못한 검증은 실행하지 못했다고 쓴다.
 7. playbook의 보고 항목으로 답한다. leaf를 읽은 원칙 중 결정을 바꾼 것만 이름과 바뀐 결정을 함께 적는다.
-8. 보고 뒤 정리. 이번 실행이 만든 자원을 지운다. 컨테이너, 서버·백그라운드 프로세스, worktree, `git bisect` 상태, 임시 도구·파일. 보고서·아티팩트와 실행 전부터 있던 것은 남긴다. 멈춤으로 끝났어도 정리하고, 이어 가면 다시 만든다. 지운 것과 남긴 것을 한 줄로 알린다. todo 마지막 항목으로 둔다.
+8. 보고 뒤 정리. 이번 실행이 만든 자원을 지운다. 컨테이너, 서버·백그라운드 프로세스, worktree, `git bisect` 상태, 임시 도구·파일. 보고서·아티팩트와 실행 전부터 있던 것은 남긴다. 멈춤으로 끝났어도 정리하고, 이어 가면 다시 만든다. 지운 것과 남긴 것을 한 줄로 알린다. 상태 파일 마지막 항목으로 둔다.
 
 ## playbook 없음
 
-- todo 첫 줄에 `playbook 없음: <이유>`를 적고, 관문에 `status: none`, `playbook: 없음`, 이유를 기록한다(`references/gate.md`).
+- 상태 파일에 `playbook: 없음`과 이유를 적고, 관문에 `status: none`, `playbook: 없음`, 이유를 기록한다(`references/gate.md`).
 - 원칙, 완료 전 검증, 보고 뒤 정리만 적용해 직접 수행한다.
 - 같은 종류의 작업이 두 번 나오면 playbook 추가를 제안한다.
 

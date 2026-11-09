@@ -19,7 +19,7 @@ dwarf 문서는 Claude Code 용어로 쓴다. 다른 도구에서는 이 표로 
 | 위임 model·effort | `Agent`의 `model`(별칭)·`effort` | 미확인 | 미확인 | 미확인 |
 | 읽기 전용 위임 | `Explore`. Bash는 남으므로 brief에 "수정하지 않는다"를 쓰고 사후 `git status` | 미확인 | 미확인 | 미확인 |
 | 사용자 질문 | `AskUserQuestion`. 없으면(`-p`) 무인 실행이라 `headless.md`대로 멈출 때 보고에 | 답변 본문 | 답변 본문 | 답변 본문 |
-| todo | `TodoWrite`가 있으면 사용. 없으면 답변에 목록. 무인 실행은 `headless.md`의 상태 파일 | 답변에 목록 | 답변에 목록 | 답변에 목록 |
+| 진행 상태 | 상태 파일 `<작업 디렉토리>/.docs/dwarf/state.md`(`state.md`). todo 도구는 쓰지 않는다 | 같음 | 같음 | 같음 |
 | 다른 dwarf 스킬 실행 | `<dwarf>/../<name>/SKILL.md`를 Read 하고 따른다. `Skill` 도구는 `disable-model-invocation` 스킬을 거부 | 같음 | 같음 | 같음 |
 | 사용자에게 안내할 호출 표기 | `/dwarf` | `/dwarf` | `/skill:dwarf` | `/skill:dwarf` |
 | 스킬 설치 경로 | `~/.claude/skills/` | `~/.codex/skills/` | `${PI_CODING_AGENT_DIR:-~/.pi/agent}/skills/` | `~/.omp/agent/skills/` |
