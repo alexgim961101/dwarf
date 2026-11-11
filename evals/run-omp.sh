@@ -6,7 +6,8 @@
 # 스킬: dwarf 모드는 --skills로 이 저장소의 skills/*만 보이게 하고 요청 앞의 /dwarf를 /skill:dwarf로 바꾼다. NO_SKILL=1이면 --no-skills.
 #       omp에 설치된 다른 스킬은 두 모드 모두 보이지 않는다. 설치는 install.sh --tool omp.
 # 세션은 결과 디렉토리 아래 sessions/에 두고 2단계는 -c로 잇는다. 사용자의 omp 세션 목록에는 남지 않는다.
-# omp에는 관문 hook이 없다. 승인 전 무변경은 규칙만으로 지켜진다(skills/dwarf/references/harness.md).
+# 관문 hook은 install.sh가 링크한 omp 확장(~/.omp/agent/extensions/dwarf-gate.ts)으로 걸린다. 확장 탐색을 끄지 않으므로 사용자의 다른 확장도 실린다.
+# 스킬 없음 기준선에도 실리지만 /skill:dwarf가 없어 판정하지 않는다.
 set -euo pipefail
 
 EVALS_DIR=$(cd "$(dirname "$0")" && pwd)

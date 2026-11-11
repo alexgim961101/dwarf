@@ -21,6 +21,7 @@ tools=$(tool_uses | jq -r .toolName | sort | uniq -c \
   | jq -R 'capture("^ *(?<n>[0-9]+) (?<t>.+)$") | {(.t): (.n | tonumber)}' | jq -sc 'add // {}')
 
 # 단계별 요약. num_turns는 assistant 메시지 수, cost_usd는 usage.cost.total의 합, tool_errors는 isError인 도구 결과 수.
+# denials는 관문 확장(skills/dwarf/hooks/omp-gate.ts)이 막은 호출 수. 막은 이유가 "dwarf"로 시작하는 오류 결과로 남는다.
 phases=$(for f in "$out"/phase*.jsonl; do
   r="${f%.jsonl}.result.json"
   [ -f "$r" ] || echo '{}' >"$r"
@@ -32,7 +33,9 @@ phases=$(for f in "$out"/phase*.jsonl; do
        cost_usd: ([$a[].message.usage.cost.total // 0] | add),
        tokens: {input: ([$a[].message.usage.input // 0] | add), output: ([$a[].message.usage.output // 0] | add),
                 cache_read: ([$a[].message.usage.cacheRead // 0] | add), cache_write: ([$a[].message.usage.cacheWrite // 0] | add)},
-       denials: 0, tool_errors: ([.[] | select(.type=="tool_execution_end" and .isError == true)] | length),
+       denials: ([.[] | select(.type=="tool_execution_end" and .isError == true)
+                  | select(((.result.content // []) | map(.text // "") | join("")) | startswith("dwarf"))] | length),
+       tool_errors: ([.[] | select(.type=="tool_execution_end" and .isError == true)] | length),
        session_id: ([.[] | select(.type=="session")] | first | .id // null)}' "$f"
 done | jq -s .)
 

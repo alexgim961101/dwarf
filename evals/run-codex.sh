@@ -5,7 +5,7 @@
 #           PHASE_TIMEOUT(단계당 초, 기본 2700), KEEP_WS=1(작업 공간 남김), NO_SKILL=1(스킬 없음 기준선)
 # 실행마다 임시 CODEX_HOME을 만들어 로그인 정보(auth.json)만 복사한다. 사용자의 설정·AGENTS.md·메모리·세션은 쓰지 않는다.
 # dwarf 모드는 이 저장소의 skills/*를 그 안에 링크하고 요청 앞의 /dwarf를 $dwarf(Codex 스킬 멘션)로 바꾼다.
-# Codex에는 관문 hook이 없다. 승인 전 무변경은 규칙만으로 지켜진다(skills/dwarf/references/harness.md).
+# 임시 CODEX_HOME에는 hooks.json을 두지 않아 관문 hook이 걸리지 않는다. 승인 전 무변경은 규칙만으로 지켜진다.
 set -euo pipefail
 
 EVALS_DIR=$(cd "$(dirname "$0")" && pwd)
