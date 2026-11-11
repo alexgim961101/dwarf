@@ -1,11 +1,11 @@
 # 관문 기록
 
-변경 playbook이 작업 트리를 바꿔도 되는지 남기는 기록. Claude Code에서는 `/dwarf`를 부를 때 등록되는 hook(`hooks/gate.py`)이 이 기록 없이 작업 트리를 바꾸지 못하게 막는다. 같은 hook이 playbook을 열기 전의 작업과 inspect 점검 없이 끝내기도 막는다.
+변경 playbook이 작업 트리를 바꿔도 되는지 남기는 기록. Claude Code에서는 `/dwarf`를 부를 때 등록되는 hook(`hooks/gate.py`)이 이 기록 없이 작업 트리를 바꾸지 못하게 막는다. 같은 hook이 playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록, inspect 점검 없이 끝내기도 막는다.
 
 ## 파일
 
 - `<작업 디렉토리>/.docs/dwarf/gate`. 작업 디렉토리는 세션을 시작한 디렉토리다.
-- Write 또는 Edit 도구로 쓴다. Bash로 쓴 기록은 hook이 받아들이지 않는다.
+- Write 또는 Edit 도구로 쓴다. Bash로 쓴 기록은 hook이 받아들이지 않는다. 세션의 관문 상태가 바뀌지 않아 승인 뒤에도 `approved`를 쓸 수 없다. Bash로 쓰면 hook이 그 호출 뒤에 알린다.
 - `answered`는 hook이 파일을 고쳐 쓴 것이다. 그 뒤에 쓸 때는 먼저 Read한다. 읽지 않고 쓰면 도구가 거절해 호출이 하나 버려진다.
 - 형식은 세 줄.
 
@@ -28,7 +28,7 @@ reason: 해결안 후보 비교를 보고하고 승인을 기다린다
 
 | playbook | 처음 쓸 때 |
 |---|---|
-| bug-fix | 1단계 시작에 `pending`. 관문 1에서 사용자가 해결안을 고르면 `approved` |
+| bug-fix | 1단계 시작에 `../root-cause/SKILL.md`를 읽고 `pending`. 관문 1에서 사용자가 해결안을 고르면 `approved` |
 | incident | 1단계 시작에 `pending`. 관문 1에서 사용자가 조치 조합을 고르면 `approved` |
 | feature | 3단계 관문 판정 결과. 관문 대상이면 `pending`, 아니면 `none`과 이유. 관문 1에서 승인되면 `approved` |
 | refactoring, perf, chore | 작업 트리를 처음 바꾸기 전에 `none`과 이유 |
@@ -39,6 +39,7 @@ reason: 해결안 후보 비교를 보고하고 승인을 기다린다
 
 - 막는 것: 작업 트리(세션을 시작한 저장소의 worktree) 안 파일을 Edit·Write·NotebookEdit로 바꾸기.
 - playbook을 열기 전에 막는 것: dwarf 문서·설정을 읽지 않는 Bash, 모든 Edit·Write·NotebookEdit, 관문 기록. Read·Grep은 막지 않는다. playbook 파일을 Read나 Bash로 읽으면 열린 것으로 본다. 예외는 `playbook: 없음` 관문 기록과 Agent 매핑 파일(`~/.config/dwarf/agents.md`, `.dwarf/agents.md`) 쓰기. `/dwarf agents`는 playbook 없이 이것만 한다.
+- root-cause를 읽기 전에 막는 것: bug-fix의 `pending` 기록. 1단계를 `root-cause` 절차로 하게 한다. 읽지 않고 직접 조사하는 실행이 많았다(`docs/progress.md` 10·13절). `../root-cause/SKILL.md`를 Read나 Bash로 읽으면 읽은 것으로 본다.
 - 되돌려 보내는 것: inspect(`../inspect/SKILL.md`)를 읽지 않고 끝내기. 관문 보고 전(`pending`)의 feature·incident, 작업 트리를 바꾸거나 커밋한 뒤(`approved`·`none`)의 bug-fix·incident·feature·refactoring·perf. 한 번만 되돌려 보낸다. 그 단계까지 가지 않았으면 이유를 보고에 넣어 다시 끝낸다.
 - 알리는 것: 관문이 열리기 전에 Bash로 작업 트리를 바꾸면 그 Bash 호출 뒤에 되돌리라고 알린다.
 - 막지 못하는 것: 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload). incident는 playbook 규칙으로 관문 1 전에 실행하지 않는다.

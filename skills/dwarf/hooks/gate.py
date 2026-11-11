@@ -24,11 +24,14 @@ GATE = Path(".docs/dwarf/gate")
 OPEN = {"approved", "none"}
 DWARF = Path(__file__).absolute().parent.parent  # 안내에 쓰는 경로. 모델이 아는 설치 경로 그대로
 SKILLS = Path(__file__).resolve().parent.parent.parent  # 심볼릭 링크를 푼 skills/
-DOC = re.compile(r"(?:playbooks/[a-z-]+|inspect/SKILL)\.md")
+DOC = re.compile(r"(?:playbooks/[a-z-]+|inspect/SKILL|root-cause/SKILL)\.md")
 DWARF_FILES = re.compile(r"\.claude/(?:skills|agents)/|\.config/dwarf/|\.dwarf/agents\.md")
 MAPPING = re.compile(r"/(?:\.config/dwarf|\.dwarf)/agents\.md$")  # references/agents.md의 Agent 매핑 파일
+GATE_BY_BASH = re.compile(r"(?:>>?|\btee\b(?:\s+-a)?)\s*[\"']?[^\s;|&]*\.docs/dwarf/gate(?![\w.-])"
+                          r"|\bsed\s+-i\b[^;|&]*\.docs/dwarf/gate(?![\w.-])")
 INSPECT_BEFORE_GATE = {"feature", "incident"}
 INSPECT_AFTER_CHANGE = {"bug-fix", "incident", "feature", "refactoring", "perf"}
+ROOT_CAUSE_BEFORE_GATE = {"bug-fix"}  # 1단계를 root-cause 절차로 한다. 읽지 않고 직접 조사하는 실행이 많았다
 
 NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 Read로 열고 단계를 상태 파일 <작업 디렉토리>/.docs/dwarf/state.md 에 옮긴 뒤 작업한다.
 그 전에는 Read·Grep과 dwarf 문서·설정을 읽는 Bash만 쓸 수 있다. 파일 수정과 관문 기록은 막힌다.
@@ -46,7 +49,7 @@ NO_DECISION = """dwarf 관문: 작업 트리를 바꾸기 전에 관문을 기�
 status: pending 또는 none
 playbook: bug-fix, incident, feature, refactoring, perf, chore 중 하나. 맞는 playbook이 없으면 없음
 reason: 한 줄
-- bug-fix는 항상 pending. 해결안 후보는 작업 트리 밖 worktree에서 시험하고 관문 1 보고 뒤 멈춘다.
+- bug-fix는 항상 pending. 기록 전에 원인 조사 절차(root-cause/SKILL.md)를 읽는다. 해결안 후보는 작업 트리 밖 worktree에서 시험하고 관문 1 보고 뒤 멈춘다.
 - incident는 항상 pending. 관문 1 전에는 실행 중인 대상의 상태를 바꾸는 명령(배포·재시작·reload, 그런 스크립트)도 실행하지 않는다.
 - feature는 다음 중 하나라도 해당하면 pending, 아니면 none과 이유. 설계 요청 / 돈·권한·개인정보·저장 데이터 형식·공개 계약의 기존 동작 변경 / 둘 이상의 모듈이나 외부 서비스 호출 변경 / 결과가 크게 갈리는 해석 / 작업 단위 다섯 초과. 애매하면 해당으로 본다.
 - refactoring, perf, chore는 none과 이유.
@@ -160,6 +163,9 @@ def check_transition(fields, state):
     status, playbook = fields.get("status", ""), fields.get("playbook", "")
     if status not in {"pending", "approved", "none"}:
         return "status는 pending, approved, none 중 하나다. answered는 hook만 쓴다."
+    if status == "pending" and playbook in ROOT_CAUSE_BEFORE_GATE and "root-cause/SKILL.md" not in state.get("docs", []):
+        return (f"{playbook} 1단계는 원인 조사 절차로 한다. 관문을 기록하기 전에 "
+                f"{DWARF.parent / 'root-cause' / 'SKILL.md'} 를 Read로 읽고, 1단계를 그 절차대로 한다.")
     if status == "approved" and state.get("status") not in {"answered", "approved"}:
         return "approved는 사용자가 관문 보고에 답한 뒤(answered)에만 쓸 수 있다. 지금은 관문 보고를 하고 이번 턴을 끝낸다."
     if status == "none" and playbook in {"bug-fix", "incident"}:
@@ -223,6 +229,10 @@ def main():
         return
 
     if event == "PostToolUse":
+        if GATE_BY_BASH.search((data.get("tool_input") or {}).get("command") or ""):
+            print("dwarf 관문: Bash로 쓴 관문 기록은 hook이 받아들이지 않는다. 세션의 관문 상태는 그대로다. "
+                  "같은 내용을 Write 도구로 다시 쓴다.", file=sys.stderr)
+            sys.exit(2)
         if state.get("status") in OPEN or not top:
             return
         fingerprint, names = tree_changes(top)

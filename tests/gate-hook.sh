@@ -62,7 +62,9 @@ expect "pending 없이 approved 못 씀" deny "$(decision PreToolUse Write "$gat
 expect "bug-fix는 none 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: none\nplaybook: bug-fix\nreason: x')"
 expect "incident는 none 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: none\nplaybook: incident\nreason: x')"
 expect "none은 이유 필요" deny "$(decision PreToolUse Write "$gate" $'status: none\nplaybook: chore\nreason:')"
-expect "pending 기록 허용" allow "$(decision PreToolUse Write "$gate" $'status: pending\nplaybook: bug-fix\nreason: 후보 비교 보고')"
+expect "bug-fix는 root-cause를 읽기 전 pending 못 씀" deny "$(decision PreToolUse Write "$gate" $'status: pending\nplaybook: bug-fix\nreason: 후보 비교 보고')"
+call PreToolUse Read "$skills/root-cause/SKILL.md" >/dev/null
+expect "root-cause를 읽은 뒤 pending 기록 허용" allow "$(decision PreToolUse Write "$gate" $'status: pending\nplaybook: bug-fix\nreason: 후보 비교 보고')"
 write_gate $'status: pending\nplaybook: bug-fix\nreason: 후보 비교 보고\n'
 expect "bug-fix pending이면 Stop 허용" allow "$(stop)"
 expect "pending이면 수정 막음" deny "$(decision PreToolUse Edit "$CLAUDE_PROJECT_DIR/src/a.js")"
@@ -73,6 +75,12 @@ expect "Bash로 바꾸면 PostToolUse가 알림(exit 2)" 2 "$?"
 git checkout -q src/a.js
 call PostToolUse Bash "git checkout src/a.js" >/dev/null 2>&1
 expect "되돌리면 알림 없음" 0 "$?"
+call PostToolUse Bash "mkdir -p .docs/dwarf && cat > .docs/dwarf/gate <<'EOF'" >/dev/null 2>&1
+expect "Bash로 관문을 쓰면 알림(exit 2)" 2 "$?"
+call PostToolUse Bash "sed -i 's/pending/approved/' .docs/dwarf/gate" >/dev/null 2>&1
+expect "sed -i로 관문을 고쳐도 알림" 2 "$?"
+call PostToolUse Bash "cat .docs/dwarf/gate && git status --short" >/dev/null 2>&1
+expect "관문을 읽기만 하면 알림 없음" 0 "$?"
 out=$(call UserPromptSubmit "" "")
 expect "사용자가 답하면 answered로 바뀜" "status: answered" "$(head -1 "$gate")"
 expect "answered 안내를 맥락에 넣음" yes "$(echo "$out" | grep -q answered && echo yes || echo no)"
@@ -94,7 +102,7 @@ expect "chore는 수정 뒤에도 Stop 허용" allow "$(stop)"
 git checkout -q src/a.js
 sid=s5
 call PreToolUse Read "$skills/dwarf/playbooks/incident.md" >/dev/null
-call PreToolUse Write "$gate" $'status: pending\nplaybook: incident\nreason: 조치 조합 보고' >/dev/null
+expect "incident는 root-cause 없이 pending 기록 허용" allow "$(decision PreToolUse Write "$gate" $'status: pending\nplaybook: incident\nreason: 조치 조합 보고')"
 expect "incident pending에서 inspect 없이 Stop 되돌림" block "$(stop)"
 sid=s6
 call PreToolUse Read "$skills/dwarf/playbooks/refactoring.md" >/dev/null
