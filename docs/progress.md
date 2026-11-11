@@ -28,6 +28,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | 13 | 비용 최적화 | 비용 집계 오류 수정(2단계 실행이 부풀었음). bug-fix 2단계 patch 적용·mktemp·관문 Read로 sonnet 2단계 -14%, haiku의 헤매는 꼬리 제거. haiku 판정은 13·13 → 11·11(바꾼 단계 밖의 실패, 2회라 미확정). 결과 아래 |
 | 14 | root-cause 강제 hook (bug-fix 관문 `pending` 전에 leaf 열람) | 구현. haiku 열람 0/4 → 4/4, 원인 커밋 2/4 → 3/4, `cancel` 3/4 → 3/4로 구분되는 효과 없음. Bash로 쓴 관문 기록을 알리는 빈틈 수정. 유지(2026-11-11 결정) |
 | 15 | GPT 3종 재측정 (omp, 각 2회) | sol dwarf 13·14(시니어 예, 원인 커밋·`cancel` 2/2) vs 기준선 8. terra 8·8 vs 7(관문 무시, 시험 생략). luna 10·8 vs 5. 숨김은 기준선도 14/14. omp 유출 오탐 수정. 결과 아래 |
+| 16 | Codex·omp 관문 hook (`gate.py --harness`, `omp-gate.ts`, `install.sh`) | 구현·설치. omp terra 승인 전 수정 2/2 → 0/2, 총점 9·9 → 10·11(관문 +1, 보고 +1), 중립 7·7 → 7·8. Codex는 활성화·PreToolUse 차단만 실제 세션 확인. 결과 아래 |
 
 ## 3. incident
 
@@ -700,8 +701,50 @@ pstack sonnet 2회, 13절에서 바꾼 dwarf sonnet 2회(rep 3·4), 9절의 dwar
 
 ### 다음
 
-- terra 관문: omp 확장이나 codex hooks로 hook 없는 harness에서도 관문을 강제할 수 있는지(11절 다음과 같음).
+- terra 관문: omp 확장이나 codex hooks로 hook 없는 harness에서도 관문을 강제할 수 있는지(11절 다음과 같음). 16절에서 구현.
 - luna-3의 "외부 의존이 없어서 멈춤". bug-fix 5단계는 고른 해결안을 적용하라고만 한다. 저장소 밖 변경이 필요한 해결안이면 저장소 안 부분을 적용하고 밖의 요구를 보고에 적는다는 문장이 필요한지, 같은 일이 한 번 더 보이면 넣는다.
+
+## 16. Codex·omp 관문 hook
+
+다른 harness에는 hook이 없다고 적었지만 기능은 있다. 없던 것은 dwarf hook의 연결이다. 15절 terra의 관문 무시를 hook으로 막을 수 있는지 본다.
+
+| harness | hook 기능 | 확인 |
+|---|---|---|
+| Codex 0.162.1 | `~/.codex/hooks.json`. Claude Code와 같은 모양(PreToolUse `permissionDecision`, Stop `decision: block`, UserPromptSubmit 출력은 맥락). 셸은 `Bash`, 패치는 `apply_patch`로 매칭. 새 hook은 `/hooks`에서 신뢰해야 돈다 | 공식 문서, `codex features list` |
+| omp 18.18.7 | 확장(TypeScript). `tool_call` → `{block, reason}`, `tool_result` 내용 교체, `session_stop` → `{decision: block}`, `before_agent_start` → 맥락 메시지 | 실행 파일 안의 구현, probe 확장 2회(luna) |
+| Pi 0.87.1 | 확장. `tool_call` 차단. 끝내기 대응은 `agent_before_settle` | 설치된 문서. 연결하지 않음 |
+
+- 구현.
+  - `gate.py --harness codex|omp`. 입력은 Claude Code hook 모양으로 받는다. 이 harness들은 hook이 모든 세션에 걸리므로 dwarf를 부른 요청(Codex `$dwarf`, omp `/skill:dwarf`)부터 판정한다. 바꾸는 파일은 Codex `apply_patch`의 `*** ... File:` 머리, omp `edit`의 `[경로#해시]` 머리에서 읽는다.
+  - 관문 기록. Codex는 apply_patch를 관문 파일에 적용해 쓸 내용을 구한다. omp edit은 줄 번호·해시로 고쳐 내용을 알 수 없으므로 write로 세 줄 전체를 쓰게 한다.
+  - Codex는 셸이 읽기 도구라 playbook을 열기 전에도 셸을 막지 않는다. Claude Code에서 띄운 실행이 물려받는 `CLAUDE_PROJECT_DIR`는 다른 harness에서 쓰지 않는다. eval을 Claude Code 세션에서 돌리면 그 값이 omp까지 넘어온다.
+  - `omp-gate.ts`. omp 이벤트를 hook 입력으로 바꿔 `gate.py`를 부른다. `-p` 실행에는 `input` 이벤트가 없어 `before_agent_start`에서 사용자 요청을 받는다. omp는 `session_stop`이 되돌려 보낸 안내도 `before_agent_start`의 prompt(reason `prompt`)로 넘기므로 그 문장은 사용자 답으로 보지 않는다(probe로 확인).
+  - `install.sh`. dwarf를 설치하면 Codex hooks.json 항목과 omp 확장 링크도 만든다. 다른 hook과 이미 있는 dwarf hook의 위치는 그대로 둔다. Codex 신뢰 기록 키에 hook 위치가 들어가서다. `--uninstall`이면 뺀다.
+  - `tests/gate-hook.sh`에 Codex 13개·omp 11개 케이스. `meta-omp.sh`의 `denials`는 확장이 막은 호출 수.
+- 실제 세션 확인.
+  - omp: luna chore 1회(관문 없이 edit 막힘 → `none` 기록 → 수정)와 아래 terra 2회. 2단계(`-c`)에서 answered 전환, `approved` 기록, patch 적용까지 정상.
+  - Codex: 이 머신은 샌드박스가 동작하지 않아(아래 외부 검증 환경 메모) `codex exec -s read-only`로 luna 2회 돌렸다. `$dwarf`로 활성화되고, 코드 모드(`exec`) 안의 `exec_command`·`apply_patch`에도 PreToolUse가 걸린다. playbook을 열기 전의 apply_patch가 막히고 안내가 모델에 전달됐다. answered 전환·Stop·PostToolUse는 셸이 실패해 실제 세션에서 보지 못했다(입력 모양 테스트만). 신뢰는 사용자가 `/hooks`에서 했다.
+
+terra 측정. `bugfix-negative-stock`, omp `openai-codex`, thinking medium, 순차. 판정은 15절 terra 2회·11절 기준선과 섞었다(`judge-20261111-160731-bugfix-negative-stock`, opus $1.03).
+
+| 실행 | hook | 총점 (14) | 중립 (10) | 1~7 | 승인 전 수정 | 막힌 호출 | 숨김 | 비용 (omp 추정 USD) | 턴 |
+|---|---|---|---|---|---|---|---|---|---|
+| terra dwarf-4 | 있음 | 10 | 7 | 2,1,1,1,2,2,1 | 없음 | 2 | 14 | 0.152 | 19+6 |
+| terra dwarf-5 | 있음 | 11 | 8 | 2,1,1,1,2,2,2 | 없음 | 2 | 14 | 0.143 | 22+11 |
+| terra dwarf-2 (15절) | 없음 | 9 | 7 | 2,1,1,1,1,2,1 | 있음 | - | 14 | 0.111 | 12+3 |
+| terra dwarf-3 (15절) | 없음 | 9 | 7 | 2,1,1,1,1,2,1 | 있음 | - | 14 | 0.090 | 13+3 |
+| terra 없음 (11절) | - | 8 | 6 | 2,1,1,1,1,1,1 | 있음 | - | 14 | 0.067 | 11+3 |
+
+- 관문: hook으로 2/2 지켰다(11·15절 hook 없이 0/3). terra는 여전히 1단계에서 수정이나 `approved` 기록을 시도하고, 막힌 뒤 관문 보고를 하고 멈춘다. terra-4는 관문 이유에 "상위 지침에 따라 무인으로 수정 진행"이라고 적었다. 무인 실행 안내를 승인으로 읽으려 했다.
+- 총점 +1~+2는 관문(5번) +1과 terra-5의 보고(7번) +1이다. 중립은 7·8 vs 7·7로 차이가 없다. 원인 커밋(`git log -p`는 2/2 실행했지만 보고에 없음), `cancel`(0/2), 후보 비교(후보 하나만 시험)는 그대로다. hook은 순서를 강제할 뿐 조사 깊이를 올리지 않는다.
+- 판정 편차. 15절 terra-2·3이 이 판정에서는 8 → 9였다(판정마다 ±1). 시니어 수준은 15절(아니오)과 달리 dwarf 4회 모두 "예"였다. 작은 묶음에 비교 대상(sol)이 없어 기준이 느슨해진 것으로 보여 이 판정의 시니어 여부는 쓰지 않는다.
+- 비용 0.10 → 0.15(약 +45%). 1단계가 관문에서 멈추고 2단계가 맥락을 다시 읽는다. Claude Code dwarf와 같은 구조가 된 것이다.
+
+### 다음
+
+- Codex 실제 세션의 answered 전환·Stop·PostToolUse. 샌드박스가 되는 환경에서 `run-codex.sh`의 임시 `CODEX_HOME`에 hooks.json을 두고 `--dangerously-bypass-hook-trust`로 돌려 본다.
+- terra 조사 깊이(원인 커밋 보고, `cancel`). hook 대상이 아니다. sol에는 없는 부족이라 모델 한계일 수 있다.
+- Pi는 쓰게 되면 연결한다. 확장 API가 omp와 같은 계열이고 끝내기 이벤트만 다르다.
 
 ## 외부 검증 환경 메모
 
