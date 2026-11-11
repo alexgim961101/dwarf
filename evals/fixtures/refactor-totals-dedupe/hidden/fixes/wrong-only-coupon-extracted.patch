@@ -1,0 +1,79 @@
+diff -ruN a/src/cart/totals.js w7/src/cart/totals.js
+--- a/src/cart/totals.js
++++ w7/src/cart/totals.js
+@@ -1,3 +1,4 @@
++import { couponDiscount } from '../pricing/coupon.js';
+ import { isRemote } from '../shipping/zones.js';
+ 
+ const VAT_PERCENT = 10;
+@@ -5,13 +6,6 @@
+ const SHIPPING_FEE = 3000;
+ const REMOTE_SURCHARGE = 3000;
+ 
+-function couponDiscount(coupon, subtotal) {
+-  if (!coupon) return 0;
+-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
+-  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
+-  const discount = Math.floor((subtotal * coupon.value) / 100);
+-  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+-}
+ 
+ // 장바구니 금액. freeShippingGap은 화면의 "무료배송까지 N원"에 쓴다.
+ export function cartTotals(items, { coupon = null, region } = {}) {
+diff -ruN a/src/invoices/totals.js w7/src/invoices/totals.js
+--- a/src/invoices/totals.js
++++ w7/src/invoices/totals.js
+@@ -1,3 +1,4 @@
++import { couponDiscount } from '../pricing/coupon.js';
+ import { isRemote } from '../shipping/zones.js';
+ 
+ const VAT_PERCENT = 10;
+@@ -5,13 +6,6 @@
+ const SHIPPING_FEE = 3000;
+ const REMOTE_SURCHARGE = 3000;
+ 
+-function couponDiscount(coupon, subtotal) {
+-  if (!coupon) return 0;
+-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
+-  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
+-  const discount = Math.floor((subtotal * coupon.value) / 100);
+-  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+-}
+ 
+ const roundHalfAway = (value) => Math.sign(value) * Math.round(Math.abs(value));
+ 
+diff -ruN a/src/orders/totals.js w7/src/orders/totals.js
+--- a/src/orders/totals.js
++++ w7/src/orders/totals.js
+@@ -1,4 +1,5 @@
+ import { invalidQuantity } from '../lib/errors.js';
++import { couponDiscount } from '../pricing/coupon.js';
+ import { isRemote } from '../shipping/zones.js';
+ 
+ const VAT_PERCENT = 10;
+@@ -6,13 +7,6 @@
+ const SHIPPING_FEE = 3000;
+ const REMOTE_SURCHARGE = 3000;
+ 
+-function couponDiscount(coupon, subtotal) {
+-  if (!coupon) return 0;
+-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
+-  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
+-  const discount = Math.floor((subtotal * coupon.value) / 100);
+-  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+-}
+ 
+ // 주문 금액. 접수할 때 한 번 계산해 주문에 저장한다.
+ export function orderTotals(lines, { coupon = null, region } = {}) {
+diff -ruN a/src/pricing/coupon.js w7/src/pricing/coupon.js
+--- a/src/pricing/coupon.js
++++ w7/src/pricing/coupon.js
+@@ -0,0 +1,8 @@
++// 쿠폰 할인액.
++export function couponDiscount(coupon, subtotal) {
++  if (!coupon) return 0;
++  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
++  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
++  const discount = Math.floor((subtotal * coupon.value) / 100);
++  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
++}

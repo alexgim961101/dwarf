@@ -1,0 +1,1 @@
+../../bugfix-negative-stock/hidden/verify.sh

@@ -1,0 +1,259 @@
+diff -ruN a/src/cart/totals.js w5/src/cart/totals.js
+--- a/src/cart/totals.js
++++ w5/src/cart/totals.js
+@@ -1,52 +1,19 @@
+-import { isRemote } from '../shipping/zones.js';
++import { computeTotals, FREE_SHIPPING_FROM } from '../pricing/totals.js';
+ 
+-const VAT_PERCENT = 10;
+-const FREE_SHIPPING_FROM = 50000;
+-const SHIPPING_FEE = 3000;
+-const REMOTE_SURCHARGE = 3000;
++// 무료배송은 쿠폰 전 금액으로 본다.
++const CART_POLICY = {
++  freeShippingBasis: 'list',
++  taxRounding: 'total',
++  chargesShipping: (lines) => lines.length > 0,
++};
+ 
+-function couponDiscount(coupon, subtotal) {
+-  if (!coupon) return 0;
+-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
+-  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
+-  const discount = Math.floor((subtotal * coupon.value) / 100);
+-  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+-}
+-
+-// 장바구니 금액. freeShippingGap은 화면의 "무료배송까지 N원"에 쓴다.
+-export function cartTotals(items, { coupon = null, region } = {}) {
++// 장바구니 금액. 수량 0인 줄은 계산에서 뺀다. freeShippingGap은 화면의 "무료배송까지 N원"에 쓴다.
++export function cartTotals(items, context) {
+   const lines = [];
+   for (const item of items) {
+     if (item.qty < 0) throw new RangeError(`수량은 음수일 수 없다: ${item.sku}`);
+     if (item.qty > 0) lines.push(item);
+   }
+-
+-  let subtotal = 0;
+-  let taxable = 0;
+-  for (const line of lines) {
+-    const amount = line.unitPrice * line.qty;
+-    subtotal += amount;
+-    if (line.taxClass === 'standard') taxable += amount;
+-  }
+-
+-  const discount = couponDiscount(coupon, subtotal);
+-  const discounted = subtotal - discount;
+-
+-  let shipping = 0;
+-  if (lines.length > 0) {
+-    shipping = subtotal >= FREE_SHIPPING_FROM ? 0 : SHIPPING_FEE;
+-    if (isRemote(region)) shipping += REMOTE_SURCHARGE;
+-  }
+-
+-  const taxableDiscount = subtotal === 0 ? 0 : Math.floor((discount * taxable) / subtotal);
+-  const tax = Math.round(((taxable - taxableDiscount) * VAT_PERCENT) / 100);
+-
+-  return {
+-    subtotal,
+-    discount,
+-    shipping,
+-    tax,
+-    total: discounted + shipping + tax,
+-    freeShippingGap: Math.max(0, FREE_SHIPPING_FROM - subtotal),
+-  };
++  const totals = computeTotals(lines, context, CART_POLICY);
++  return { ...totals, freeShippingGap: Math.max(0, FREE_SHIPPING_FROM - totals.subtotal) };
+ }
+diff -ruN a/src/invoices/totals.js w5/src/invoices/totals.js
+--- a/src/invoices/totals.js
++++ w5/src/invoices/totals.js
+@@ -1,52 +1,15 @@
+-import { isRemote } from '../shipping/zones.js';
++import { computeTotals } from '../pricing/totals.js';
+ 
+-const VAT_PERCENT = 10;
+-const FREE_SHIPPING_FROM = 50000;
+-const SHIPPING_FEE = 3000;
+-const REMOTE_SURCHARGE = 3000;
++export { lineBreakdown } from '../pricing/totals.js';
+ 
+-function couponDiscount(coupon, subtotal) {
+-  if (!coupon) return 0;
+-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
+-  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
+-  const discount = Math.floor((subtotal * coupon.value) / 100);
+-  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+-}
+-
+-const roundHalfAway = (value) => Math.sign(value) * Math.round(Math.abs(value));
+-
+-// 줄별 금액. 쿠폰 할인을 줄 금액 비율로 나누고 남는 원은 마지막 줄에 싣는다.
+-export function lineBreakdown(lines, discount) {
+-  let subtotal = 0;
+-  for (const line of lines) subtotal += line.unitPrice * line.qty;
+-
+-  let rest = discount;
+-  return lines.map((line, index) => {
+-    const amount = line.unitPrice * line.qty;
+-    const isLast = index === lines.length - 1;
+-    const share = isLast ? rest : discount === 0 ? 0 : Math.floor((discount * amount) / subtotal);
+-    rest -= share;
+-    const tax = line.taxClass === 'standard' ? roundHalfAway(((amount - share) * VAT_PERCENT) / 100) : 0;
+-    return { ...line, amount, discount: share, tax };
+-  });
+-}
+-
+-// 세금계산서 금액. 세액은 줄별 세액의 합이다.
+-export function invoiceTotals(lines, { coupon = null, region } = {}) {
+-  let subtotal = 0;
+-  for (const line of lines) subtotal += line.unitPrice * line.qty;
+-
+-  const discount = couponDiscount(coupon, subtotal);
+-  const discounted = subtotal - discount;
+-
+-  let shipping = 0;
+-  if (subtotal > 0) {
+-    shipping = discounted >= FREE_SHIPPING_FROM ? 0 : SHIPPING_FEE;
+-    if (isRemote(region)) shipping += REMOTE_SURCHARGE;
+-  }
+-
+-  let tax = 0;
+-  for (const line of lineBreakdown(lines, discount)) tax += line.tax;
+-
+-  return { subtotal, discount, tax, shipping, total: discounted + shipping + tax };
++// 반품 전표(금액이 음수)에는 배송비를 매기지 않는다.
++const INVOICE_POLICY = {
++  freeShippingBasis: 'discounted',
++  taxRounding: 'line',
++  chargesShipping: (_lines, subtotal) => subtotal > 0,
++};
++
++// 세금계산서 금액. 세액은 줄별 세액의 합이다. 키 순서는 원장 CSV(ledger.js)의 금액 열 순서다.
++export function invoiceTotals(lines, context) {
++  return computeTotals(lines, context, INVOICE_POLICY);
+ }
+diff -ruN a/src/orders/totals.js w5/src/orders/totals.js
+--- a/src/orders/totals.js
++++ w5/src/orders/totals.js
+@@ -1,44 +1,16 @@
+ import { invalidQuantity } from '../lib/errors.js';
+-import { isRemote } from '../shipping/zones.js';
++import { computeTotals } from '../pricing/totals.js';
+ 
+-const VAT_PERCENT = 10;
+-const FREE_SHIPPING_FROM = 50000;
+-const SHIPPING_FEE = 3000;
+-const REMOTE_SURCHARGE = 3000;
+-
+-function couponDiscount(coupon, subtotal) {
+-  if (!coupon) return 0;
+-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
+-  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
+-  const discount = Math.floor((subtotal * coupon.value) / 100);
+-  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
+-}
++const ORDER_POLICY = {
++  freeShippingBasis: 'discounted',
++  taxRounding: 'total',
++  chargesShipping: (lines) => lines.length > 0,
++};
+ 
+ // 주문 금액. 접수할 때 한 번 계산해 주문에 저장한다.
+-export function orderTotals(lines, { coupon = null, region } = {}) {
++export function orderTotals(lines, context) {
+   for (const line of lines) {
+     if (!Number.isInteger(line.qty) || line.qty <= 0) throw invalidQuantity(line.sku);
+   }
+-
+-  let subtotal = 0;
+-  let taxable = 0;
+-  for (const line of lines) {
+-    const amount = line.unitPrice * line.qty;
+-    subtotal += amount;
+-    if (line.taxClass === 'standard') taxable += amount;
+-  }
+-
+-  const discount = couponDiscount(coupon, subtotal);
+-  const discounted = subtotal - discount;
+-
+-  let shipping = 0;
+-  if (lines.length > 0) {
+-    shipping = discounted >= FREE_SHIPPING_FROM ? 0 : SHIPPING_FEE;
+-    if (isRemote(region)) shipping += REMOTE_SURCHARGE;
+-  }
+-
+-  const taxableDiscount = subtotal === 0 ? 0 : Math.floor((discount * taxable) / subtotal);
+-  const tax = Math.round(((taxable - taxableDiscount) * VAT_PERCENT) / 100);
+-
+-  return { subtotal, discount, shipping, tax, total: discounted + shipping + tax };
++  return computeTotals(lines, context, ORDER_POLICY);
+ }
+diff -ruN a/src/pricing/totals.js w5/src/pricing/totals.js
+--- a/src/pricing/totals.js
++++ w5/src/pricing/totals.js
+@@ -0,0 +1,64 @@
++import { isRemote } from '../shipping/zones.js';
++
++const VAT_PERCENT = 10;
++export const FREE_SHIPPING_FROM = 50000;
++const SHIPPING_FEE = 3000;
++const REMOTE_SURCHARGE = 3000;
++
++function couponDiscount(coupon, subtotal) {
++  if (!coupon) return 0;
++  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) return 0;
++  if (coupon.kind === 'amount') return Math.min(coupon.value, subtotal);
++  const discount = Math.floor((subtotal * coupon.value) / 100);
++  return coupon.maxDiscount ? Math.min(discount, coupon.maxDiscount) : discount;
++}
++
++// 음수(반품 줄)는 절댓값으로 반올림해 원래 줄과 부호만 다르게 한다. 양수에서는 Math.round와 같다.
++const roundHalfAway = (value) => Math.sign(value) * Math.round(Math.abs(value));
++const vatOf = (amount) => roundHalfAway((amount * VAT_PERCENT) / 100);
++const amountOf = (line) => line.unitPrice * line.qty;
++const sumOf = (lines, pick) => lines.reduce((sum, line) => sum + pick(line), 0);
++
++// 줄별 금액. 쿠폰 할인을 줄 금액 비율로 나누고 남는 원은 마지막 줄에 싣는다.
++export function lineBreakdown(lines, discount) {
++  const subtotal = sumOf(lines, amountOf);
++  let rest = discount;
++  return lines.map((line, index) => {
++    const amount = amountOf(line);
++    const isLast = index === lines.length - 1;
++    const share = isLast ? rest : discount === 0 ? 0 : Math.floor((discount * amount) / subtotal);
++    rest -= share;
++    return { ...line, amount, discount: share, tax: line.taxClass === 'standard' ? vatOf(amount - share) : 0 };
++  });
++}
++
++const TAX = {
++  // 과세 금액 합계에서 한 번 반올림한다.
++  total(lines, discount, subtotal) {
++    const taxable = sumOf(lines.filter((line) => line.taxClass === 'standard'), amountOf);
++    const taxableDiscount = subtotal === 0 ? 0 : Math.floor((discount * taxable) / subtotal);
++    return Math.round(((taxable - taxableDiscount) * VAT_PERCENT) / 100);
++  },
++  // 줄마다 반올림한 세액을 더한다.
++  line: (lines, discount) => sumOf(lineBreakdown(lines, discount), (line) => line.tax),
++};
++
++// 금액 계산. 경로마다 다른 규칙은 policy로 받는다.
++//   freeShippingBasis: 'list'(쿠폰 전 금액) | 'discounted'(쿠폰 뒤 금액)
++//   taxRounding: 'total' | 'line'
++//   chargesShipping(lines, subtotal): 배송비를 매길지
++export function computeTotals(lines, { coupon = null, region } = {}, policy) {
++  const subtotal = sumOf(lines, amountOf);
++  const discount = couponDiscount(coupon, subtotal);
++  const discounted = subtotal - discount;
++
++  let shipping = 0;
++  if (policy.chargesShipping(lines, subtotal)) {
++    const basis = policy.freeShippingBasis === 'list' ? subtotal : discounted;
++    shipping = basis >= FREE_SHIPPING_FROM ? 0 : SHIPPING_FEE;
++    if (isRemote(region)) shipping += REMOTE_SURCHARGE;
++  }
++
++  const tax = TAX[policy.taxRounding](lines, discount, subtotal);
++  return { subtotal, discount, shipping, tax, total: discounted + shipping + tax };
++}

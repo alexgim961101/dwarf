@@ -20,7 +20,7 @@
 
 ```bash
 npm test
-npm run dev                                   # http://localhost:3000
+npm run dev                                   # http://localhost:4732
 npm run report -- data/snapshots/latest.json  # 어젯밤 스냅샷
 ```
 

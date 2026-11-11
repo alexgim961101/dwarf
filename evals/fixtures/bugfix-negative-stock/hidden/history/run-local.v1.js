@@ -15,5 +15,5 @@ const app = createApp({
   logger: createLogger(),
 });
 
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.PORT ?? 4732);
 createServer(app).listen(port, () => app.logger.info('listening', { port }));

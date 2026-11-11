@@ -1,0 +1,8 @@
+{
+  "reconcile": {
+    "run": "src/jobs/reconcile.js#reconcile",
+    "with": {
+      "invoiceTotals": "src/invoices/totals.js#invoiceTotals"
+    }
+  }
+}

@@ -3,6 +3,8 @@
 # 사용: evals/run.sh <fixture> <model> [반복 번호]
 # 환경 변수: BUDGET_USD(단계당 비용 상한, 기본 5), PHASE_TIMEOUT(단계당 초, 기본 2700), KEEP_WS=1(작업 공간 남김),
 #           NO_SKILL=1(스킬 없음 기준선. 요청 앞의 /dwarf를 떼고 이 저장소의 스킬을 모두 끈 채 같은 요청을 실행)
+#           PSTACK_DIR=<경로>(pstack 비교 실행. 이 저장소의 스킬을 모두 끄고 그 경로의 Claude Code 플러그인을 실어
+#                            /dwarf 대신 /pstack:poteto-mode로 같은 요청을 실행. evals/ 밖에 둔다)
 set -euo pipefail
 
 EVALS_DIR=$(cd "$(dirname "$0")" && pwd)
@@ -20,12 +22,21 @@ hooks=$(sed -n '/^hooks:$/,/^---$/s/^  \(".*\)$/\1/p' "$EVALS_DIR/../skills/dwar
   | paste -sd, - | sed 's/.*/{"hooks": {&}}/' | jq -c .)
 # 모든 단계에 무인 실행임을 알린다(skills/dwarf/references/headless.md).
 headless_prompt="이 세션은 무인 실행이다. 사용자는 지금 답할 수 없고, 답은 다음 실행의 요청으로 온다."
-# 스킬 없음 기준선: skills/*/를 전부 끈다(skillOverrides). 스킬을 부르지 않으므로 관문 hook도 걸리지 않는다.
+# 스킬 없음 기준선과 pstack 비교 실행: skills/*/를 전부 끈다(skillOverrides). 스킬을 부르지 않으므로 관문 hook도 걸리지 않는다.
 skill=dwarf
 suffix=
 if [ "${NO_SKILL:-}" = 1 ]; then
   skill=none
   suffix=-noskill
+elif [ -n "${PSTACK_DIR:-}" ]; then
+  [ -f "$PSTACK_DIR/.claude-plugin/plugin.json" ] || { echo "pstack 플러그인 없음: $PSTACK_DIR" >&2; exit 1; }
+  PSTACK_DIR=$(cd "$PSTACK_DIR" && pwd -P)
+  # 플러그인 경로는 실행 기록에 남는다. evals/ 아래면 모든 실행이 유출로 잡힌다.
+  case $PSTACK_DIR/ in "$EVALS_DIR"/*) echo "PSTACK_DIR은 evals/ 밖에 둔다: $PSTACK_DIR" >&2; exit 1 ;; esac
+  skill=pstack
+  suffix=-pstack
+fi
+if [ "$skill" != dwarf ]; then
   overrides=$(for d in "$EVALS_DIR"/../skills/*/; do basename "$d"; done \
     | jq -R . | jq -sc 'map({(.): "off"}) | add | {skillOverrides: .}')
 fi
@@ -58,12 +69,17 @@ if [ -x "$F/hidden/pre.sh" ]; then "$F/hidden/pre.sh" "$ws" "$out/state"; fi
 phase() {
   local n=$1 prompt=$2 sid=${3:-} cmd=() text
   text=$(cat "$prompt")
-  [ "$skill" = none ] && text=${text#/dwarf }
+  # 호출 표기만 바꾼다. 이어 가는 말(resume.md)에는 표기가 없어 그대로 간다.
+  case $skill:$text in
+    none:"/dwarf "*) text=${text#/dwarf } ;;
+    pstack:"/dwarf "*) text="/pstack:poteto-mode ${text#/dwarf }" ;;
+  esac
   [ -n "$timeout_cmd" ] && cmd=("$timeout_cmd" "$limit")
   cmd+=(claude -p --model "$model" --permission-mode auto --max-budget-usd "$budget"
     --output-format stream-json --verbose --append-system-prompt "$headless_prompt")
-  if [ "$skill" = none ]; then cmd+=(--settings "$overrides")
+  if [ "$skill" != dwarf ]; then cmd+=(--settings "$overrides")
   elif [ -n "$sid" ]; then cmd+=(--settings "$hooks"); fi
+  if [ "$skill" = pstack ]; then cmd+=(--plugin-dir "$PSTACK_DIR"); fi
   [ -n "$sid" ] && cmd+=(--resume "$sid")
   (cd "$ws" && "${cmd[@]}" "$text" </dev/null) >"$out/phase$n.jsonl" 2>"$out/phase$n.stderr" || true
   jq -c 'select(.type=="result")' "$out/phase$n.jsonl" | tail -1 >"$out/phase$n.result.json"
@@ -92,6 +108,11 @@ git -C "$ws" log --oneline "$BASE"..HEAD >"$out/commits.txt" || true
 # 기준선이 dwarf 문서를 읽었으면 스킬이 꺼지지 않은 것이다. 그 실행은 기준선으로 쓰지 않는다.
 if [ "$skill" = none ] && [ "$(jq -r '.docs_read | length' "$out/meta.json")" != 0 ]; then
   echo "경고: 스킬 없음 기준선이 dwarf 문서를 읽었다: $(jq -r '.docs_read | join(" ")' "$out/meta.json")" >&2
+fi
+# pstack 실행의 docs_read에는 pstack 문서가 들어간다. dwarf 라우터를 읽었으면 섞인 실행이라 쓰지 않는다.
+if [ "$skill" = pstack ] && jq -c 'select(.type=="assistant") | .message.content[]? | select(.type=="tool_use") | .input' \
+  "$out"/phase*.jsonl | grep -q 'skills/dwarf/'; then
+  echo "경고: pstack 실행이 dwarf 문서를 읽었다" >&2
 fi
 
 echo "$out"

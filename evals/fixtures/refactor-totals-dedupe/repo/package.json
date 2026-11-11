@@ -1,0 +1,13 @@
+{
+  "name": "wholesale",
+  "version": "2.4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "dev": "node src/dev/run-local.js"
+  }
+}

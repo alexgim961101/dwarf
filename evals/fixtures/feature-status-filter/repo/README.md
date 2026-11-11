@@ -12,6 +12,6 @@
 - 오류 응답: `{ "error": "메시지" }`
 
 ```bash
-npm start   # PORT 기본 3000
+npm start   # PORT 기본 4733
 npm test
 ```

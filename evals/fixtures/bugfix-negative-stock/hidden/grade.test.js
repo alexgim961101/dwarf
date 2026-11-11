@@ -76,15 +76,16 @@ test('regular-sku-never-stored-negative', async () => {
   const repo = createMemoryStockRepo({ A: 10 });
   const negatives = [];
   const adjust = repo.adjust.bind(repo);
-  repo.adjust = async (sku, delta) => {
-    const level = await adjust(sku, delta);
+  // 감시만 한다. 인자는 그대로 넘긴다. 조건부 차감을 옵션 인자로 넘기는 수정이 있다(2026-11-11 측정).
+  repo.adjust = async (sku, delta, ...rest) => {
+    const level = await adjust(sku, delta, ...rest);
     if (sku === 'A' && level < 0) negatives.push(level);
     return level;
   };
   const set = repo.set.bind(repo);
-  repo.set = async (sku, qty) => {
+  repo.set = async (sku, qty, ...rest) => {
     if (sku === 'A' && qty < 0) negatives.push(qty);
-    return set(sku, qty);
+    return set(sku, qty, ...rest);
   };
   const app = createApp({ repo, catalog, pricing: createFakePricing({ prices }), refunds: createFakeRefunds() });
   const ops = [];

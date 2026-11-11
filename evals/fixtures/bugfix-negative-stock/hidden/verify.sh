@@ -6,6 +6,8 @@
 # 사용법: hidden/verify.sh   어디서 불러도 된다. 하나라도 기대와 다르면 종료 코드 1.
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
+# 바꾸기 전 저장소. 원본과 결과를 비교하는 숨김 테스트(refactoring fixture)가 쓴다.
+export ORIGINAL_REPO="$here/../repo"
 bad=0
 
 run() { # 이름 기대(fail|pass) [패치]

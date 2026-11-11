@@ -1,0 +1,12 @@
+[
+  { "sku": "NB-A5-80", "name": "A5 노트 80매", "unitPrice": 1235, "taxClass": "standard" },
+  { "sku": "PN-GEL-05", "name": "젤펜 0.5mm 12입", "unitPrice": 8450, "taxClass": "standard" },
+  { "sku": "BK-WKB-3", "name": "초등 문제집 3학년", "unitPrice": 9800, "taxClass": "exempt" },
+  { "sku": "BK-DIC-KE", "name": "국어사전", "unitPrice": 27000, "taxClass": "exempt" },
+  { "sku": "FL-A4-100", "name": "A4 클리어파일 100매", "unitPrice": 3415, "taxClass": "standard" },
+  { "sku": "TP-OPP-48", "name": "OPP 테이프 48mm 6입", "unitPrice": 5995, "taxClass": "standard" },
+  { "sku": "ST-STP-10", "name": "스테이플러 10호", "unitPrice": 4275, "taxClass": "standard" },
+  { "sku": "PP-A4-500", "name": "A4 복사지 500매", "unitPrice": 6490, "taxClass": "standard" },
+  { "sku": "CL-DSK-01", "name": "탁상 달력", "unitPrice": 2755, "taxClass": "standard" },
+  { "sku": "BK-ATL-01", "name": "지도책", "unitPrice": 15300, "taxClass": "exempt" }
+]

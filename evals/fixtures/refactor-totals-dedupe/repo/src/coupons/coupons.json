@@ -1,0 +1,6 @@
+[
+  { "code": "WELCOME10", "kind": "percent", "value": 10, "maxDiscount": 20000 },
+  { "code": "BULK15", "kind": "percent", "value": 15, "minSubtotal": 300000, "maxDiscount": 100000 },
+  { "code": "SAVE5000", "kind": "amount", "value": 5000, "minSubtotal": 30000 },
+  { "code": "TEACHER7", "kind": "percent", "value": 7 }
+]
