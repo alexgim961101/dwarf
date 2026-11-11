@@ -114,6 +114,67 @@ call PreToolUse Write "$gate" $'status: none\nplaybook: feature\nreason: 한 파
 echo d >>src/a.js && git -c user.name=t -c user.email=t@t commit -qam d
 expect "feature 커밋 뒤 inspect 없이 Stop 되돌림" block "$(stop)"
 
+# Codex·omp: 각 harness의 hook 입력 모양. 물려받은 CLAUDE_PROJECT_DIR는 쓰지 않아야 한다
+hrun() { printf '%s' "$2" | CLAUDE_PROJECT_DIR=/nonexistent python3 "$HOOK" --harness "$1"; }  # hrun harness 입력JSON
+hdec() {  # hdec harness 입력JSON. hook이 아무것도 내지 않으면 허용
+  local out
+  out=$(hrun "$1" "$2")
+  if [ -z "$out" ]; then echo allow; else echo "$out" | jq -r '.hookSpecificOutput.permissionDecision // "allow"'; fi
+}
+ev() {  # ev 이벤트 도구 도구입력JSON
+  jq -nc --arg e "$1" --arg t "$2" --argjson i "$3" --arg s "$sid" --arg cwd "$CLAUDE_PROJECT_DIR" \
+    '{hook_event_name: $e, session_id: $s, cwd: $cwd, tool_name: $t, tool_input: $i}'
+}
+prompt() { jq -nc --arg p "$1" --arg s "$sid" --arg cwd "$CLAUDE_PROJECT_DIR" '{hook_event_name: "UserPromptSubmit", session_id: $s, cwd: $cwd, prompt: $p}'; }
+
+sid=c1
+rm -f "$gate"
+src_patch='{"command":"*** Begin Patch\n*** Update File: src/a.js\n@@\n-a\n+b\n*** End Patch"}'
+expect "codex: \$dwarf 전에는 판정하지 않음" allow "$(hdec codex "$(ev PreToolUse apply_patch "$src_patch")")"
+hrun codex "$(prompt '$dwarf 재고 버그 고쳐줘')" >/dev/null
+expect "codex: playbook 열기 전에도 셸 허용" allow "$(hdec codex "$(ev PreToolUse Bash '{"command":"rg stock src"}')")"
+expect "codex: playbook 열기 전 apply_patch 막음" deny "$(hdec codex "$(ev PreToolUse apply_patch "$src_patch")")"
+hrun codex "$(ev PreToolUse Bash '{"command":"sed -n 1,80p ~/.codex/skills/dwarf/playbooks/bug-fix.md"}')" >/dev/null
+expect "codex: 기록 없으면 apply_patch 막음" deny "$(hdec codex "$(ev PreToolUse apply_patch "$src_patch")")"
+add_pending='{"command":"*** Begin Patch\n*** Add File: .docs/dwarf/gate\n+status: pending\n+playbook: bug-fix\n+reason: 후보 비교\n*** End Patch"}'
+expect "codex: root-cause 읽기 전 pending 막음" deny "$(hdec codex "$(ev PreToolUse apply_patch "$add_pending")")"
+hrun codex "$(ev PreToolUse Bash '{"command":"cat ~/.codex/skills/root-cause/SKILL.md"}')" >/dev/null
+expect "codex: Add File로 pending 기록 허용" allow "$(hdec codex "$(ev PreToolUse apply_patch "$add_pending")")"
+write_gate $'status: pending\nplaybook: bug-fix\nreason: 후보 비교\n'
+expect "codex: pending이면 apply_patch 막음" deny "$(hdec codex "$(ev PreToolUse apply_patch "$src_patch")")"
+to_approved='{"command":"*** Begin Patch\n*** Update File: .docs/dwarf/gate\n@@\n-status: answered\n+status: approved\n playbook: bug-fix\n*** End Patch"}'
+expect "codex: 답 전에 approved로 고치는 패치 막음" deny "$(hdec codex "$(ev PreToolUse apply_patch '{"command":"*** Begin Patch\n*** Update File: .docs/dwarf/gate\n@@\n-status: pending\n+status: approved\n*** End Patch"}')")"
+out=$(hrun codex "$(prompt 'A안으로 진행해')")
+expect "codex: 답하면 answered" "status: answered" "$(head -1 "$gate")"
+expect "codex: answered 안내 출력" yes "$(echo "$out" | grep -q '셸로 읽은 뒤' && echo yes || echo no)"
+expect "codex: 맞지 않는 hunk는 전체 쓰기로 돌려보냄" deny "$(hdec codex "$(ev PreToolUse apply_patch '{"command":"*** Begin Patch\n*** Update File: .docs/dwarf/gate\n@@\n-status: nope\n+status: approved\n*** End Patch"}')")"
+expect "codex: answered 뒤 Update File로 approved 허용" allow "$(hdec codex "$(ev PreToolUse apply_patch "$to_approved")")"
+expect "codex: approved면 apply_patch 허용" allow "$(hdec codex "$(ev PreToolUse apply_patch "$src_patch")")"
+
+sid=o1
+rm -f "$gate"
+expect "omp: /skill:dwarf 전에는 판정하지 않음" allow "$(hdec omp "$(ev PreToolUse write '{"path":"src/a.js","content":"x"}')")"
+hrun omp "$(prompt '/skill:dwarf 재고 버그 고쳐줘')" >/dev/null
+expect "omp: playbook 열기 전 작업 bash 막음" deny "$(hdec omp "$(ev PreToolUse bash '{"command":"npm test"}')")"
+expect "omp: playbook 열기 전 grep 허용" allow "$(hdec omp "$(ev PreToolUse grep '{"pattern":"a","path":"src"}')")"
+hrun omp "$(ev PreToolUse read '{"path":"skill://dwarf/playbooks/bug-fix.md"}')" >/dev/null
+omp_edit='{"input":"*** Begin Patch\n[ src/a.js#AB12]\nPUT 1.=1:\n+b\n*** End Patch\n"}'
+expect "omp: 기록 없으면 edit 막음" deny "$(hdec omp "$(ev PreToolUse edit "$omp_edit")")"
+expect "omp: 관문 edit은 write로 돌려보냄" deny "$(hdec omp "$(ev PreToolUse edit '{"input":"*** Begin Patch\n[.docs/dwarf/gate#9A32]\nPUT 1.=1:\n+status: none\n*** End Patch\n"}')")"
+omp_pending='{"path":".docs/dwarf/gate","content":"status: pending\nplaybook: bug-fix\nreason: 후보 비교"}'
+expect "omp: root-cause 읽기 전 pending 막음" deny "$(hdec omp "$(ev PreToolUse write "$omp_pending")")"
+hrun omp "$(ev PreToolUse read '{"path":"skill://root-cause"}')" >/dev/null
+expect "omp: read skill://root-cause 뒤 pending 허용" allow "$(hdec omp "$(ev PreToolUse write "$omp_pending")")"
+write_gate $'status: pending\nplaybook: bug-fix\nreason: 후보 비교\n'
+echo b >>src/a.js
+hrun omp "$(ev PostToolUse bash '{"command":"echo b >> src/a.js"}')" >/dev/null 2>&1
+expect "omp: bash로 바꾸면 알림(exit 2)" 2 "$?"
+git checkout -q src/a.js
+hrun omp "$(prompt '승인')" >/dev/null
+expect "omp: 답하면 answered" "status: answered" "$(head -1 "$gate")"
+expect "omp: answered 뒤 approved 허용" allow "$(hdec omp "$(ev PreToolUse write '{"path":".docs/dwarf/gate","content":"status: approved\nplaybook: bug-fix\nreason: A안"}')")"
+expect "omp: approved면 edit 허용" allow "$(hdec omp "$(ev PreToolUse edit "$omp_edit")")"
+
 git worktree remove --force "$CLAUDE_PROJECT_DIR/worktrees/x"
 rm -rf "$tmp"
 echo "실패 $fails개"

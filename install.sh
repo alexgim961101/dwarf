@@ -25,6 +25,12 @@ usage() {
 Pi의 PI_CODING_AGENT_DIR가 설정되어 있으면 그 디렉토리의 skills/를 사용한다.
 사용자 지정 경로는 절대 경로로 지정한다.
 
+dwarf 관문 hook (dwarf를 설치·제거할 때 함께):
+  Claude Code   라우터 frontmatter로 /dwarf 호출 때 등록. 따로 설치하지 않는다
+  Codex         ~/.codex/hooks.json에 등록. 다른 hook은 그대로 둔다. Codex의 /hooks에서 한 번 신뢰해야 돈다
+  OMP           ~/.omp/agent/extensions/dwarf-gate.ts 링크
+  Pi            없음
+
 심볼릭 링크 방식이므로 이 저장소를 옮기거나 삭제하면 설치가 깨진다.
 이미 같은 이름의 파일/디렉토리나 다른 대상을 가리키는 링크가 있으면
 덮어쓰지 않고 건너뛴다.
@@ -85,6 +91,67 @@ else
   done
 fi
 
+# Codex hooks.json의 dwarf 관문 hook을 맞춘다. 다른 hook과 이미 있는 dwarf hook의 위치는 그대로 둔다.
+# Codex는 hook 위치까지 신뢰 기록에 넣으므로 옮기면 다시 신뢰해야 한다.
+codex_hooks() {  # codex_hooks gate.py경로
+  python3 - "$uninstall" "$HOME/.codex/hooks.json" "$1" <<'PY'
+import json, sys
+uninstall, path, gate = sys.argv[1] == "1", sys.argv[2], sys.argv[3]
+try:
+    with open(path) as f:
+        data = json.load(f)
+except FileNotFoundError:
+    if uninstall:
+        sys.exit()
+    data = {}
+before = json.dumps(data, sort_keys=True)
+hooks = data.setdefault("hooks", {})
+command = f'python3 "{gate}" --harness codex'
+want = {} if uninstall else {
+    event: ({"matcher": matcher} if matcher else {}) | {"hooks": [{"type": "command", "command": command}]}
+    for event, matcher in (("PreToolUse", "Bash|apply_patch"), ("PostToolUse", "Bash"), ("UserPromptSubmit", None), ("Stop", None))
+}
+ours = lambda group: any("dwarf/hooks/gate.py" in hook.get("command", "") for hook in group.get("hooks", []))
+for event in set(hooks) | set(want):
+    kept, found = [], False
+    for group in hooks.get(event, []):
+        if ours(group):
+            if group == want.get(event) and not found:
+                kept.append(group)
+                found = True
+            continue
+        kept.append(group)
+    if event in want and not found:
+        kept.append(want[event])
+    if kept:
+        hooks[event] = kept
+    else:
+        hooks.pop(event, None)
+if json.dumps(data, sort_keys=True) == before:
+    if not uninstall:
+        print(f"  관문 hook 이미 등록됨: {path}")
+    sys.exit()
+with open(path, "w") as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+print(f"  관문 hook 제거: {path}" if uninstall else f"  관문 hook 등록: {path}. Codex에서 /hooks로 신뢰해야 돈다")
+PY
+}
+
+# omp 확장 디렉토리에 관문 연결부를 링크한다. 다른 확장은 건드리지 않는다.
+omp_extension() {
+  local link="$HOME/.omp/agent/extensions/dwarf-gate.ts" src="$SKILLS_DIR/dwarf/hooks/omp-gate.ts"
+  if [ -L "$link" ] && [ "$(readlink -f "$link")" = "$(readlink -f "$src")" ]; then
+    if [ "$uninstall" -eq 1 ]; then rm "$link" && echo "  관문 확장 제거: $link"; else echo "  관문 확장 이미 설치됨: $link"; fi
+  elif [ "$uninstall" -eq 1 ]; then
+    return 0
+  elif [ -e "$link" ] || [ -L "$link" ]; then
+    echo "  관문 확장 건너뜀 (같은 이름의 파일이 있음): $link"
+  else
+    mkdir -p "$(dirname "$link")" && ln -s "$src" "$link" && echo "  관문 확장 설치: $link"
+  fi
+}
+
 targets=()
 for candidate in claude codex pi omp; do
   [ "$tool" = all ] || [ "$tool" = "$candidate" ] || continue
@@ -140,4 +207,11 @@ for target in "${targets[@]}"; do
     ln -s "$src" "$link"
     echo "  설치: $name"
   done
+
+  # dwarf 관문 hook. Claude Code는 라우터 frontmatter로 등록되므로 Codex·omp만 연결한다
+  case " ${skills[*]} " in *" dwarf "*) ;; *) continue ;; esac
+  case "$target" in
+    "$HOME/.codex/skills") codex_hooks "$target/dwarf/hooks/gate.py" ;;
+    "$HOME/.omp/agent/skills") omp_extension ;;
+  esac
 done

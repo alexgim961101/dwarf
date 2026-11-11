@@ -12,7 +12,7 @@
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent와 model·effort를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |
 
-변경 playbook은 작업 트리를 바꾸기 전에 관문을 `.docs/dwarf/gate`에 기록한다. Claude Code에서는 `/dwarf`가 등록하는 hook이 기록 없는 수정과 승인 전 수정, playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록을 막고, inspect 점검 없이 끝내려 하면 한 번 되돌려 보낸다(`python3`, `git` 필요). 규칙은 `skills/dwarf/references/gate.md`.
+변경 playbook은 작업 트리를 바꾸기 전에 관문을 `.docs/dwarf/gate`에 기록한다. 관문 hook이 기록 없는 수정과 승인 전 수정, playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록을 막고, inspect 점검 없이 끝내려 하면 한 번 되돌려 보낸다(`python3`, `git` 필요). Claude Code는 `/dwarf`가 hook을 등록한다. Codex는 `install.sh`가 `~/.codex/hooks.json`에 등록하고 Codex의 `/hooks`에서 한 번 신뢰해야 돈다. OMP는 `install.sh`가 확장(`~/.omp/agent/extensions/dwarf-gate.ts`)을 링크한다. Pi에는 연결하지 않았다. 규칙은 `skills/dwarf/references/gate.md`.
 
 최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 Agent와 model·effort(선택)를 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
 
@@ -20,7 +20,7 @@
 
 ```
 skills/
-  dwarf/              # 라우터. SKILL.md, playbooks/, references/, hooks/gate.py
+  dwarf/              # 라우터. SKILL.md, playbooks/, references/, hooks/gate.py·omp-gate.ts
   p-<name>/           # 원칙 14개. 적용할 때만 읽음
   how/  why/          # 동작·구조 파악, 동기·이력 조사
   blast-radius/       # 변경이 diff 밖의 어디를 깨뜨리나

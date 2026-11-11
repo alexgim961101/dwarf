@@ -6,7 +6,7 @@
 
 - 공통 개발 작업용 개인 스킬 묶음. pstack `poteto-mode`의 라우터·playbook 구조에서 영감을 받았다.
 - `/dwarf <목표>` 하나로 시작한다. 라우터가 작업을 분류해 playbook을 고르고, playbook 단계와 leaf 스킬을 순서대로 수행한다.
-- 산출물은 Markdown 스킬 문서다. 실행 코드는 `install.sh`, 관문 hook(`skills/dwarf/hooks/gate.py`), `evals/`와 `tests/`의 검사 스크립트.
+- 산출물은 Markdown 스킬 문서다. 실행 코드는 `install.sh`, 관문 hook(`skills/dwarf/hooks/gate.py`, omp 연결부 `omp-gate.ts`), `evals/`와 `tests/`의 검사 스크립트.
 - 문서는 Claude Code 용어로 쓴다. Codex·Pi·OMP와의 차이는 `skills/dwarf/references/harness.md`에만 둔다.
 
 ## 프로젝트 구조
@@ -16,7 +16,8 @@
 | `skills/dwarf/SKILL.md` | 라우터. 인자 해석, 분류 트리, 재라우팅, 실행 규칙 |
 | `skills/dwarf/playbooks/` | 작업 유형별 단계 9개. brainstorm, investigation, review, bug-fix, incident, feature, refactoring, perf, chore |
 | `skills/dwarf/references/` | 공유 참조. `roles`(역할·brief), `agents`(Agent 선택·기록), `harness`(도구별 매핑), `principles`(원칙 색인), `gate`(관문 기록), `state`(상태 파일·이어 가기), `headless`(무인 실행) |
-| `skills/dwarf/hooks/gate.py` | 관문 hook. `/dwarf`를 부르면 등록되어 관문 기록 없는 작업 트리 수정, playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록, inspect 없이 끝내기를 막는다 |
+| `skills/dwarf/hooks/gate.py` | 관문 hook. 관문 기록 없는 작업 트리 수정, playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록, inspect 없이 끝내기를 막는다. Claude Code는 `/dwarf`가 등록, Codex는 `install.sh`가 `hooks.json`에 등록(`--harness codex`) |
+| `skills/dwarf/hooks/omp-gate.ts` | omp 확장. omp 이벤트를 hook 입력으로 바꿔 `gate.py --harness omp`에 넘긴다. `install.sh`가 링크 |
 | `skills/p-<name>/` | 원칙 leaf 14개. 적용할 때만 읽음 |
 | `skills/how/`, `skills/why/` | leaf. 동작·구조 파악 / 동기·이력 조사 |
 | `skills/blast-radius/` | leaf. 변경이 diff 밖의 어디를 깨뜨리나 |
@@ -26,7 +27,7 @@
 | `tests/gate-hook.sh` | 관문 hook 판정 검사 |
 | `evals/` | 모델 간 평가. 결함·요구를 심은 fixture, 숨김 채점, `run.sh`·`judge.sh` |
 | `docs/progress.md` | 개선 진행 기록. 항목별 상태, 측정 결과, 이어 갈 곳 |
-| `install.sh` | `skills/*/`를 각 도구의 skills 디렉토리에 심볼릭 링크 |
+| `install.sh` | `skills/*/`를 각 도구의 skills 디렉토리에 심볼릭 링크. dwarf와 함께 Codex hooks.json 항목과 omp 확장도 연결 |
 | `.docs/` | 로컬 작업 문서. gitignore |
 
 ```
@@ -70,6 +71,7 @@
 | 분류 트리 변경 | `tests/routing.md` 재실행 |
 | 역할·brief 변경 | `references/roles.md`, 그 역할을 쓰는 playbook·leaf |
 | 관문 규칙 변경 | `references/gate.md`, `hooks/gate.py`의 안내 문구, `tests/gate-hook.sh`, 관문을 쓰는 playbook(bug-fix·incident·feature) |
+| 관문 hook의 이벤트·도구 | 라우터 frontmatter의 hooks, `install.sh`의 Codex hooks.json 항목, `hooks/omp-gate.ts`, `references/harness.md`의 관문 hook 행 |
 | 상태 파일 규칙 변경 | `references/state.md`, `references/headless.md`, `hooks/gate.py`의 안내 문구, `evals/run.sh`의 상태 파일 복사 |
 | 라우터 frontmatter의 hooks | 값은 줄마다 JSON으로 쓴다. `evals/run.sh`가 그대로 읽어 2단계에 `--settings`로 넘긴다 |
 | 스킬 추가·삭제 | `evals/run.sh`의 스킬 없음 기준선은 `skills/*/`를 모두 끈다. 디렉토리 밖에 스킬을 두면 목록에 더한다 |
@@ -85,8 +87,8 @@
 | 라우팅 | `tests/routing.md`의 실행 방법대로. 서브에이전트에 "분류" 절과 프롬프트만 주고 playbook 이름을 받아 기대값과 비교 |
 | playbook·leaf 동작 | `evals/README.md`대로 모델별 실행과 블라인드 판정. 사용량이 들어 사용자 확인 후 |
 | frontmatter·줄 상한 | 아래 정적 확인 |
-| 관문 hook | `tests/gate-hook.sh`. 실제 세션 동작은 `evals/`의 관문 fixture |
-| `install.sh` | `bash -n install.sh`, 격리 HOME에서 설치·재실행·제거 |
+| 관문 hook | `tests/gate-hook.sh`(Claude Code·Codex·omp 입력). 실제 세션 동작은 `evals/`의 관문 fixture. Codex는 이 머신에서 샌드박스가 안 돼 `codex exec -s read-only`로 활성화와 PreToolUse 차단만 확인 |
+| `install.sh` | `bash -n install.sh`, 격리 HOME에서 설치·재실행·제거. Codex·omp hook은 격리 HOME에 `.codex`·`.omp/agent`를 만들고 확인 |
 | 스킬 노출 | 설치 후 새 세션의 `/` 메뉴에 보이는지, description이 깨지지 않는지 |
 
 ```bash
