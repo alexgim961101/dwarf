@@ -60,7 +60,8 @@ PENDING = (
 
 ANSWERED = (
     "dwarf 관문: 사용자가 관문 보고에 답했다(answered). 답이 승인이면 .docs/dwarf/gate의 status를 "
-    "approved로 바꾼 뒤 수정한다. 승인이 아니면 status: pending으로 다시 쓰고 바뀐 보고를 한다."
+    "approved로 바꾼 뒤 수정한다. 승인이 아니면 status: pending으로 다시 쓰고 바뀐 보고를 한다. "
+    "hook이 이 파일을 고쳐 썼으므로 먼저 Read한 뒤 쓴다."
 )
 
 
