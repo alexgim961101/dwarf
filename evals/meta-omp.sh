@@ -7,8 +7,10 @@ set -uo pipefail
 EVALS_DIR=$(cd "$(dirname "$0")" && pwd)
 out=$1 fixture=$2 model=$3 rep=$4 skill=${5:-dwarf} thinking=${6:-} provider=${7:-}
 
-# 채점 자료 유출: 실행 기록에 evals 경로가 나오면 그 실행은 무효
-leak=$(cat "$out"/phase*.jsonl | grep -c "$EVALS_DIR")
+# 채점 자료 유출: 실행 기록에 evals 경로가 나오면 그 실행은 무효.
+# 자기 결과 디렉토리는 뺀다. omp는 긴 도구 출력을 세션 아티팩트(artifact://N)로 sessions/ 아래에 두고, 다시 읽으면 그 경로가 기록에 남는다.
+own=$(cd "$out" && pwd -P)/
+leak=$(cat "$out"/phase*.jsonl | grep "$EVALS_DIR" | grep -vcF "$own" || true)
 
 tool_uses() { jq -c 'select(.type=="tool_execution_start")' "$out"/phase*.jsonl; }
 # 읽은 dwarf 문서. omp는 스킬을 read skill://<이름> 으로 읽으므로 그것도 <이름>/SKILL.md로 센다.
