@@ -7,7 +7,7 @@ ws=$1 stage=$2
 [ "$stage" = phase1 ] || exit 0
 ORIGINAL_REPO=$(cd "$(dirname "$0")/../repo" && pwd)
 export ORIGINAL_REPO
-if [ -f "$ws/.docs/dwarf/gate" ]; then info gate-record "$(tr '\n' ' ' <"$ws/.docs/dwarf/gate")"; fi
+g=$(ls -t "$ws"/.docs/dwarf/*/gate 2>/dev/null | head -1); if [ -n "$g" ]; then info gate-record "$(tr '\n' ' ' <"$g")"; fi
 run_hidden_tests "$ws" "$(dirname "$0")/grade.test.js"
 check_visible_tests "$ws"
 check_tests_added "$ws"

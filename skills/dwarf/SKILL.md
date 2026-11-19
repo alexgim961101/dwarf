@@ -57,7 +57,7 @@ hooks:
 1. 위임 여부를 묻는다. 매칭한 playbook과 현재 매핑(`explorer=…, reviewer=…, worker=…`. 기록된 model·effort는 함께)을 보이고 이번 실행에서 서브에이전트를 쓸지 고르게 한다. Claude Code는 `AskUserQuestion`, 다른 도구는 번호 목록. 선택지는 "사용 (매핑대로)"(기본)과 "사용 안 함 (owner가 직접)".
    - 묻지 않는 경우. 요청에 이미 정해져 있다("서브에이전트 없이" 등). 같은 playbook을 이어 간다(앞 선택 유지. playbook이 바뀌면 다시 묻는다). 이번 실행에서 매핑을 막 골랐다. 매핑이 모두 `none`이거나 위임 도구가 없다. 무인 실행이다(매핑대로).
    - "사용 안 함"이면 이번 실행 동안 모든 역할을 `none`으로 본다. 매핑 파일은 바꾸지 않는다.
-2. 매칭한 playbook을 열고 단계를 상태 파일에 그대로 옮긴다(`references/state.md`). 맨 위에 playbook과 위임 선택을 적는다. 이어 가는 작업이면 끝나지 않은 첫 단계부터 한다.
+2. 매칭한 playbook을 열고 단계를 이 작업의 상태 파일에 그대로 옮긴다(`references/state.md`). 맨 위에 playbook, 위임 선택, 목표를 적는다. 상태 파일은 작업마다 따로 두고 다른 작업의 것은 덮어쓰지 않는다. 이어 가는 작업이면 끝나지 않은 첫 단계부터 한다.
 3. 건너뛰는 단계는 지우지 않고 `skip: <이유>`를 붙인다.
 4. 변경 playbook은 작업 트리를 처음 바꾸기 전에 `references/gate.md`대로 관문을 기록한다. Claude Code·Codex·omp에서는 hook이 기록 없는 수정을 막는다. 막히면 그 안내를 따른다.
 5. 각 단계는 owner가 수행한다. 단계가 leaf 스킬(`how`·`why`·`bench`·`inspect` 등)을 부르면 그때 `<dwarf>/../<이름>/SKILL.md`를 읽고 따른다. 자동 호출이 꺼져 있어 `Skill` 도구 목록에 없다. 단계가 역할을 지정하면 `references/roles.md`의 위임 여부와 brief 계약대로 위임한다. 결과는 diff와 출력으로 직접 확인한 뒤 자기 말로 요약한다. 위임 결과를 그대로 전달하지 않는다.

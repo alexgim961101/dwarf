@@ -76,7 +76,7 @@ phase() {
   echo "## phase$n" >>"$out/checks.txt"
   "$F/hidden/check.sh" "$ws" "phase$n" "$out/state" >>"$out/checks.txt" 2>&1 || true
   # 상태 파일(references/state.md). 단계가 끝날 때의 상태를 남긴다. 스킬 없음 기준선에는 없다.
-  cp "$ws/.docs/dwarf/state.md" "$out/phase$n.state.md" 2>/dev/null || true
+  cp "$(ls -t "$ws"/.docs/dwarf/*/state.md 2>/dev/null | head -1)" "$out/phase$n.state.md" 2>/dev/null || true
   echo "INFO state-status $(sed -n 's/^status: *//p' "$out/phase$n.state.md" 2>/dev/null | head -1)" >>"$out/checks.txt"
 }
 

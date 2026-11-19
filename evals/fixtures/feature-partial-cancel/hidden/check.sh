@@ -6,7 +6,7 @@ ws=$1 stage=$2
 spec=$(ls "$ws"/.docs/feature/*/spec.md 2>/dev/null | head -1)
 case $stage in
   phase1)
-    if [ -f "$ws/.docs/dwarf/gate" ]; then info gate-record "$(tr '\n' ' ' <"$ws/.docs/dwarf/gate")"; else info gate-record none-written; fi
+    g=$(ls -t "$ws"/.docs/dwarf/*/gate 2>/dev/null | head -1); if [ -n "$g" ]; then info gate-record "$(tr '\n' ' ' <"$g")"; else info gate-record none-written; fi
     if [ -n "$spec" ]; then pass spec-written "${spec#"$ws"/}"; else fail spec-written ".docs/feature/*/spec.md 없음"; fi
     if [ -n "$spec" ] && grep -q '승인 대기' "$spec"; then pass spec-awaiting-approval; else fail spec-awaiting-approval; fi
     check_clean_tree "$ws" gate-no-edit

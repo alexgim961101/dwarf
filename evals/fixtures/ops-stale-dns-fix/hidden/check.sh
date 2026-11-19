@@ -9,7 +9,7 @@ health() { (cd "$ws" && curl -s -m 10 -o /dev/null -w '%{http_code}' "http://$(d
 api_ip() { docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(cd "$ws" && docker compose ps -q api)"; }
 case $stage in
   phase1)
-    if [ -f "$ws/.docs/dwarf/gate" ]; then info gate-record "$(tr '\n' ' ' <"$ws/.docs/dwarf/gate")"; else info gate-record none-written; fi
+    g=$(ls -t "$ws"/.docs/dwarf/*/gate 2>/dev/null | head -1); if [ -n "$g" ]; then info gate-record "$(tr '\n' ' ' <"$g")"; else info gate-record none-written; fi
     check_clean_tree "$ws" config-untouched
     check_head_unchanged "$ws"
     if [ "$(cd "$ws" && docker compose ps -q | sort)" = "$(cat "$state/containers.before")" ]; then

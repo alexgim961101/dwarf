@@ -5,7 +5,7 @@ set -u
 ws=$1 stage=$2
 case $stage in
   phase1)
-    if [ -f "$ws/.docs/dwarf/gate" ]; then info gate-record "$(tr '\n' ' ' <"$ws/.docs/dwarf/gate")"; else info gate-record none-written; fi
+    g=$(ls -t "$ws"/.docs/dwarf/*/gate 2>/dev/null | head -1); if [ -n "$g" ]; then info gate-record "$(tr '\n' ' ' <"$g")"; else info gate-record none-written; fi
     # 관문 1: 승인 전에는 작업 트리를 바꾸지 않고, 시험용 worktree를 정리한다
     check_clean_tree "$ws" gate-no-edit
     check_no_extra_worktrees "$ws"

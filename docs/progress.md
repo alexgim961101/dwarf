@@ -29,6 +29,7 @@ dwarf를 어디까지 개선했는지와 다음에 이어 갈 곳. 측정 방법
 | 14 | root-cause 강제 hook (bug-fix 관문 `pending` 전에 leaf 열람) | 구현. haiku 열람 0/4 → 4/4, 원인 커밋 2/4 → 3/4, `cancel` 3/4 → 3/4로 구분되는 효과 없음. Bash로 쓴 관문 기록을 알리는 빈틈 수정. 유지(2026-11-11 결정) |
 | 15 | GPT 3종 재측정 (omp, 각 2회) | sol dwarf 13·14(시니어 예, 원인 커밋·`cancel` 2/2) vs 기준선 8. terra 8·8 vs 7(관문 무시, 시험 생략). luna 10·8 vs 5. 숨김은 기준선도 14/14. omp 유출 오탐 수정. 결과 아래 |
 | 16 | Codex·omp 관문 hook (`gate.py --harness`, `omp-gate.ts`, `install.sh`) | 구현·설치. omp terra 승인 전 수정 2/2 → 0/2, 총점 9·9 → 10·11(관문 +1, 보고 +1), 중립 7·7 → 7·8. Codex는 활성화·PreToolUse 차단만 실제 세션 확인. 결과 아래 |
+| 17 | 작업별 상태 디렉토리 (한 디렉토리의 동시 작업) | 구현. `tests/gate-hook.sh` 72개 통과. 실제 동시 세션은 미측정. 아래 |
 
 ## 3. incident
 
@@ -745,6 +746,38 @@ terra 측정. `bugfix-negative-stock`, omp `openai-codex`, thinking medium, 순�
 - Codex 실제 세션의 answered 전환·Stop·PostToolUse. 샌드박스가 되는 환경에서 `run-codex.sh`의 임시 `CODEX_HOME`에 hooks.json을 두고 `--dangerously-bypass-hook-trust`로 돌려 본다.
 - terra 조사 깊이(원인 커밋 보고, `cancel`). hook 대상이 아니다. sol에는 없는 부족이라 모델 한계일 수 있다.
 - Pi는 쓰게 되면 연결한다. 확장 API가 omp와 같은 계열이고 끝내기 이벤트만 다르다.
+
+## 17. 작업별 상태 디렉토리
+
+### 배경
+
+- 상태 파일·관문 기록·무인 실행 보고·후보 patch가 `.docs/dwarf/` 아래 고정 경로였다. 상태 파일 규칙은 "이어 가는 작업이 아니면 덮어쓴다"였다.
+- 한 디렉토리에서 여러 세션이 다른 작업을 하는 실사용(git 저장소가 아닌 여러 저장소의 상위 작업 공간)에서 서로 덮어썼다.
+  - 11-11: 한 세션이 작업 중 02:00에 `state.md`를 고쳤다. 02:03에 다른 세션이 `/dwarf`로 incident를 시작하며 그 파일을 읽고 덮어썼다. 앞 세션은 기록 없이 4단계까지 진행했다.
+  - 11-16: 세션 기록에서 `state.md`를 복구하는 스크립트를 따로 돌렸다.
+  - 11-18~19: 모델이 규칙에 없이 앞 기록을 `state.<날짜>-<주제>.md`로 옮겨 두기 시작했다(5개).
+- 관문 판정은 세션별(`/tmp/dwarf-gate/<session>.json`)이라 섞이지 않았다. 다만 UserPromptSubmit이 디스크의 관문 파일 `status` 줄을 고쳐 써서 다른 세션의 기록이 바뀔 수 있었다.
+
+### 바꾼 것
+
+- 작업마다 `<작업 디렉토리>/.docs/dwarf/<날짜>-<주제>/`를 쓴다. `state.md`·`gate`·`report.md`·`candidates/`가 그 안에 있다. 모델이 이미 하던 관례이고 feature `spec.md`와 같은 이름 규칙이다.
+- `state.md`. 형식에 `목표` 줄을 더했다. 다른 작업의 디렉토리는 `done`이어도 덮어쓰지 않는다. 새 세션은 `waiting`·`running`인 작업의 `목표`로 이어 갈 작업을 고르고, 둘 이상 맞으면 묻는다. 이 세션에서 다루지 않은 `running`은 다른 세션이 진행 중일 수 있어 확인한다.
+- `gate.py`. 관문 기록은 `.docs/dwarf/<작업>/gate`다. 세션이 쓴 관문 경로를 세션 상태에 두고, `answered`로 고쳐 쓰는 것도 그 파일만 한다. 다른 작업의 관문을 쓰면 판정을 처음부터 한다. 지금까지는 같은 세션에서 `새 작업`으로 바꾼 뒤 앞 작업의 `approved`를 근거로 곧바로 `approved`를 쓸 수 있었다. 안내 문구, Bash로 관문 파일을 쓰는지 잡는 정규식도 새 경로로 바꿨다.
+- 라우터 실행 2, `gate.md`, `headless.md`, `harness.md`, `bug-fix.md` 3단계, `README.md`, `AGENTS.md`의 함께 갱신 표.
+- `evals/run*.sh`는 `.docs/dwarf/*/state.md` 중 가장 최근 것을 복사하고, fixture `check.sh` 7개는 `.docs/dwarf/*/gate`를 읽는다.
+- `.docs/dwarf/gate`와 `.docs/dwarf/state.md`(옛 경로)는 따로 지원하지 않는다. 옛 경로에 쓴 관문은 관문 기록으로 보지 않고, 수정이 막힐 때 안내가 새 경로를 알려 준다.
+
+### 확인
+
+- `tests/gate-hook.sh` 72개 통과. 새 케이스 5개. 다른 작업의 관문은 answered로 고쳐 쓰지 않음, answered 안내에 이 작업의 관문 경로, 작업을 바꿀 때 앞 작업의 approved가 넘어가지 않음, 거부된 전환은 이 작업의 관문을 바꾸지 않음, 작업 디렉토리 없는 `.docs/dwarf/gate`는 관문이 아님. 초기화 줄을 뺀 hook에서는 approved 이월 케이스만 실패했다.
+- 실제 세션 확인은 하지 않았다. 대화형 두 세션을 같은 디렉토리에서 동시에 돌리는 실행은 `run.sh`로 만들 수 없다.
+
+### 다음
+
+- 실사용에서 확인. 같은 디렉토리의 동시 세션이 각자 디렉토리를 쓰는지, 새 세션 `/dwarf 진행해`가 `목표`로 작업을 고르는지.
+- 따로 찾은 관문 문제 두 가지(이번에 고치지 않음).
+  - 백그라운드 서브에이전트가 결과를 돌려주는 메시지("Another Claude session sent a message")에도 UserPromptSubmit이 걸려 `pending`이 `answered`로 바뀐다. 11-11 incident 세션에서 두 번. 모델이 "서브에이전트 보고는 승인이 아니다"라며 `pending`으로 다시 써서 지켜졌다. omp는 session_stop 안내를 거르지만 Claude Code에는 그런 거름이 없다.
+  - git 저장소에서 두 세션이 같은 작업 트리를 쓰면, hook은 세션 첫 호출 때의 작업 트리 지문과 비교하므로 다른 세션의 수정을 이 세션의 수정으로 본다. 관문이 열리기 전인 세션에 "되돌린다" 안내가 나가고, Stop의 inspect 요구도 잘못 걸린다. 코드로만 확인했다.
 
 ## 외부 검증 환경 메모
 

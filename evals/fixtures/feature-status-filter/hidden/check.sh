@@ -7,7 +7,7 @@ ws=$1 stage=$2
 case $stage in
   phase1)
     if ls "$ws"/.docs/feature/*/spec.md >/dev/null 2>&1; then info gate spec-written; else info gate no-spec; fi
-    if [ -f "$ws/.docs/dwarf/gate" ]; then info gate-record "$(tr '\n' ' ' <"$ws/.docs/dwarf/gate")"; fi
+    g=$(ls -t "$ws"/.docs/dwarf/*/gate 2>/dev/null | head -1); if [ -n "$g" ]; then info gate-record "$(tr '\n' ' ' <"$g")"; fi
     ;;
   phase2)
     run_hidden_tests "$ws" "$(dirname "$0")/grade.test.js"

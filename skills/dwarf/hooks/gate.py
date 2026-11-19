@@ -7,7 +7,8 @@
 - UserPromptSubmit: 승인 대기(pending) 중에 사용자가 답하면 answered로 바꾼다.
 - Stop: playbook의 inspect 점검을 거치지 않고 끝내려 하면 한 번 되돌려 보낸다.
 
-모델은 <작업 디렉토리>/.docs/dwarf/gate에 기록하고, hook은 파일 쓰기 도구로 쓴 기록만 세션별 상태로 받아들인다.
+모델은 작업마다 <작업 디렉토리>/.docs/dwarf/<날짜>-<주제>/gate에 기록하고, hook은 파일 쓰기 도구로 쓴 기록만 세션별 상태로 받아들인다.
+세션이 쓴 관문 파일 하나를 그 세션의 기록으로 본다. 같은 디렉토리에서 도는 다른 세션의 기록은 고쳐 쓰지 않는다.
 --harness codex|omp: Codex hooks.json과 omp 확장(omp-gate.ts)이 부른다. 입력은 Claude Code hook과 같은 모양이다.
 그 harness에서는 hook이 모든 세션에 걸리므로 dwarf를 부른 요청부터 판정한다.
 규칙은 skills/dwarf/references/gate.md.
@@ -37,22 +38,23 @@ OMP_TOOLS = {"read": "Read", "write": "Write", "edit": "Edit", "bash": "Bash"}  
 PATCH_FILE = re.compile(r"^\*\*\* (?:Add|Update|Delete) File: (.+)$|^\*\*\* Move to: (.+)$", re.M)  # Codex apply_patch
 OMP_EDIT_FILE = re.compile(r"^\[\s*(.+?)#\w+\]\s*$", re.M)  # omp edit의 파일 머리 [경로#해시]
 
-GATE = Path(".docs/dwarf/gate")
+GATES = Path(".docs/dwarf")  # 관문 기록은 작업마다 .docs/dwarf/<날짜>-<주제>/gate
+GATE_HINT = "<작업 디렉토리>/.docs/dwarf/<날짜>-<주제>/gate"
 OPEN = {"approved", "none"}
 DWARF = Path(__file__).absolute().parent.parent  # 안내에 쓰는 경로. 모델이 아는 설치 경로 그대로
 SKILLS = Path(__file__).resolve().parent.parent.parent  # 심볼릭 링크를 푼 skills/
 DOC = re.compile(r"(?:playbooks/[a-z-]+|inspect/SKILL|root-cause/SKILL)\.md")
 DWARF_FILES = re.compile(r"\.claude/(?:skills|agents)/|\.codex/skills/|\.omp/agent/skills/|skill://|\.config/dwarf/|\.dwarf/agents\.md")
 MAPPING = re.compile(r"/(?:\.config/dwarf|\.dwarf)/agents\.md$")  # references/agents.md의 Agent 매핑 파일
-GATE_BY_BASH = re.compile(r"(?:>>?|\btee\b(?:\s+-a)?)\s*[\"']?[^\s;|&]*\.docs/dwarf/gate(?![\w.-])"
-                          r"|\bsed\s+-i\b[^;|&]*\.docs/dwarf/gate(?![\w.-])")
+GATE_BY_BASH = re.compile(r"(?:>>?|\btee\b(?:\s+-a)?)\s*[\"']?[^\s;|&]*\.docs/dwarf/[^\s;|&/\"']+/gate(?![\w.-])"
+                          r"|\bsed\s+-i\b[^;|&]*\.docs/dwarf/[^\s;|&/\"']+/gate(?![\w.-])")
 INSPECT_BEFORE_GATE = {"feature", "incident"}
 INSPECT_AFTER_CHANGE = {"bug-fix", "incident", "feature", "refactoring", "perf"}
 ROOT_CAUSE_BEFORE_GATE = {"bug-fix"}  # 1단계를 root-cause 절차로 한다. 읽지 않고 직접 조사하는 실행이 많았다
 
-NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 {WORDS['read']}로 열고 단계를 상태 파일 <작업 디렉토리>/.docs/dwarf/state.md 에 옮긴 뒤 작업한다.
+NO_PLAYBOOK = f"""dwarf: playbook을 아직 열지 않았다. 분류한 playbook {DWARF}/playbooks/<이름>.md 를 {WORDS['read']}로 열고 단계를 이 작업의 상태 파일 <작업 디렉토리>/.docs/dwarf/<날짜>-<주제>/state.md 에 옮긴 뒤 작업한다.
 그 전에는 {WORDS['before']}
-- 맞는 playbook이 없으면 <작업 디렉토리>/.docs/dwarf/gate 를 {WORDS['write']}로 세 줄로 쓴다. status: none / playbook: 없음 / reason: 맞는 playbook이 없는 이유
+- 맞는 playbook이 없으면 {GATE_HINT} 를 {WORDS['write']}로 세 줄로 쓴다. status: none / playbook: 없음 / reason: 맞는 playbook이 없는 이유
 - Agent 매핑 파일(~/.config/dwarf/agents.md, .dwarf/agents.md)은 playbook 없이 쓸 수 있다. /dwarf agents는 {DWARF}/references/agents.md 를 읽고 이것만 한다."""
 
 GATE_WHOLE = f"dwarf 관문: 관문 기록은 {WORDS['write']}로 세 줄 전체를 다시 쓴다. 부분 수정은 hook이 내용을 확인할 수 없다."
@@ -64,7 +66,7 @@ NO_INSPECT = (
 )
 
 NO_DECISION = f"""dwarf 관문: 작업 트리를 바꾸기 전에 관문을 기록한다.
-<작업 디렉토리>/.docs/dwarf/gate 를 {WORDS['write']}로 세 줄로 쓴다.
+{GATE_HINT} 를 {WORDS['write']}로 세 줄로 쓴다. 이 작업의 상태 파일과 같은 디렉토리다.
 status: pending 또는 none
 playbook: bug-fix, incident, feature, refactoring, perf, chore 중 하나. 맞는 playbook이 없으면 없음
 reason: 한 줄
@@ -81,7 +83,7 @@ PENDING = (
 )
 
 ANSWERED = (
-    "dwarf 관문: 사용자가 관문 보고에 답했다(answered). 답이 승인이면 .docs/dwarf/gate의 status를 "
+    "dwarf 관문: 사용자가 관문 보고에 답했다(answered). 답이 승인이면 {gate}의 status를 "
     "approved로 바꾼 뒤 수정한다. 승인이 아니면 status: pending으로 다시 쓰고 바뀐 보고를 한다. "
     f"hook이 이 파일을 고쳐 썼으므로 먼저 {WORDS['read']}로 읽은 뒤 쓴다."
 )
@@ -170,6 +172,15 @@ def guarded(root, top, target):
 def resolve(cwd, path):
     target = Path(path.strip())
     return (target if target.is_absolute() else Path(cwd) / target).resolve()
+
+
+def is_gate(root, target):
+    """<작업 디렉토리>/.docs/dwarf/<작업>/gate면 관문 기록."""
+    return target.name == "gate" and target.parent.parent == (root / GATES).resolve()
+
+
+def answered(state):
+    return ANSWERED.format(gate=state.get("gate") or GATE_HINT)
 
 
 def normalize(tool, tool_input):
@@ -282,7 +293,6 @@ def main():
             return
         state["active"] = True  # 이 세션에서 dwarf를 불렀다. 이후 모든 요청에 판정한다
     top = toplevel(root)
-    gate_path = root / GATE
 
     if "baseline" not in state:  # 세션의 첫 hook 호출. 그때의 작업 트리를 기준으로 삼는다
         state["baseline"] = tree_changes(top)[0] if top else None
@@ -294,14 +304,15 @@ def main():
         if state.get("status") == "pending":
             state["status"] = "answered"
             save(session, state)
-            try:
+            try:  # 이 세션의 관문 파일만 고친다. 같은 디렉토리의 다른 작업 기록은 그대로 둔다
+                gate_path = Path(state["gate"])
                 lines = gate_path.read_text().splitlines()
                 gate_path.write_text("\n".join(
                     "status: answered" if line.strip().lower().startswith("status:") else line for line in lines
                 ) + "\n")
-            except OSError:
+            except (KeyError, OSError):
                 pass
-            print(ANSWERED)
+            print(answered(state))
         return
 
     if event == "PostToolUse":
@@ -344,8 +355,14 @@ def main():
     cwd = data.get("cwd") or root
     targets = [resolve(cwd, path) for path in paths]
 
-    others = [target for target in targets if target != gate_path.resolve()]
-    if len(others) < len(targets):
+    gates = {target for target in targets if is_gate(root, target)}
+    others = [target for target in targets if target not in gates]
+    if len(gates) > 1:
+        deny("dwarf 관문: 관문 기록은 한 번에 한 작업 것만 쓴다.")
+    if gates:
+        gate_path = gates.pop()
+        if state.get("gate") not in (None, str(gate_path)):  # 다른 작업의 관문. 앞 작업의 판정을 넘기지 않는다
+            state = {key: value for key, value in state.items() if key not in {"status", "playbook", "reason"}}
         text = new_gate_text(tool, tool_input, gate_path, cwd)
         if text is None:
             deny(GATE_WHOLE)
@@ -355,7 +372,8 @@ def main():
         problem = check_transition(fields, state)
         if problem:
             deny(f"dwarf 관문: {problem}")
-        state.update(status=fields["status"], playbook=fields.get("playbook", ""), reason=fields.get("reason", ""))
+        state.update(gate=str(gate_path), status=fields["status"],
+                     playbook=fields.get("playbook", ""), reason=fields.get("reason", ""))
         save(session, state)
         opened = opened or state["playbook"] == "없음"
     if not others:
@@ -367,7 +385,7 @@ def main():
         deny(NO_PLAYBOOK)
     if state.get("status") in OPEN or not any(guarded(root, top, target) for target in others):
         return
-    deny({"pending": PENDING, "answered": ANSWERED}.get(state.get("status"), NO_DECISION))
+    deny({"pending": PENDING, "answered": answered(state)}.get(state.get("status"), NO_DECISION))
 
 
 if __name__ == "__main__":

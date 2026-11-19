@@ -7,12 +7,12 @@
 
 | 호출 | 하는 일 |
 |---|---|
-| `/dwarf <목표>` | 분류 → 서브에이전트 사용 여부 선택 → playbook 단계를 상태 파일(`.docs/dwarf/state.md`)에 복사 → 수행 → 보고 → 실행이 만든 자원 정리. 멈춘 작업은 다른 세션에서도 상태 파일로 이어 간다 |
+| `/dwarf <목표>` | 분류 → 서브에이전트 사용 여부 선택 → playbook 단계를 작업별 상태 파일(`.docs/dwarf/<날짜>-<주제>/state.md`)에 복사 → 수행 → 보고 → 실행이 만든 자원 정리. 멈춘 작업은 다른 세션에서도 상태 파일로 이어 간다. 한 디렉토리에서 여러 작업을 동시에 해도 서로의 상태를 덮어쓰지 않는다 |
 | `/dwarf 새 작업 <목표>` | 진행 중 playbook을 버리고 재매칭 |
 | `/dwarf agents` | 역할(explorer·reviewer·worker)에 붙일 Agent와 model·effort를 다시 고름 |
 | `/how`, `/why`, `/blast-radius`, `/bench`, `/root-cause`, `/blueprint`, `/inspect` | leaf 스킬 단독 호출 |
 
-변경 playbook은 작업 트리를 바꾸기 전에 관문을 `.docs/dwarf/gate`에 기록한다. 관문 hook이 기록 없는 수정과 승인 전 수정, playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록을 막고, inspect 점검 없이 끝내려 하면 한 번 되돌려 보낸다(`python3`, `git` 필요). Claude Code는 `/dwarf`가 hook을 등록한다. Codex는 `install.sh`가 `~/.codex/hooks.json`에 등록하고 Codex의 `/hooks`에서 한 번 신뢰해야 돈다. OMP는 `install.sh`가 확장(`~/.omp/agent/extensions/dwarf-gate.ts`)을 링크한다. Pi에는 연결하지 않았다. 규칙은 `skills/dwarf/references/gate.md`.
+변경 playbook은 작업 트리를 바꾸기 전에 관문을 상태 파일과 같은 디렉토리의 `gate`(`.docs/dwarf/<날짜>-<주제>/gate`)에 기록한다. 관문 hook이 기록 없는 수정과 승인 전 수정, playbook을 열기 전의 작업, root-cause를 읽기 전의 bug-fix 관문 기록을 막고, inspect 점검 없이 끝내려 하면 한 번 되돌려 보낸다(`python3`, `git` 필요). Claude Code는 `/dwarf`가 hook을 등록한다. Codex는 `install.sh`가 `~/.codex/hooks.json`에 등록하고 Codex의 `/hooks`에서 한 번 신뢰해야 돈다. OMP는 `install.sh`가 확장(`~/.omp/agent/extensions/dwarf-gate.ts`)을 링크한다. Pi에는 연결하지 않았다. 규칙은 `skills/dwarf/references/gate.md`.
 
 최초 실행에서 Agent 매핑이 없으면 dwarf가 이 환경의 Agent 후보를 보여 주고 역할마다 Agent와 model·effort(선택)를 고르게 한다. 선택은 `~/.config/dwarf/agents.md`에 dwarf가 기록한다.
 
